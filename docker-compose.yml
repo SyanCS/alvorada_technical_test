@@ -19,33 +19,32 @@ services:
     networks:
       - alvorada_network
 
-  # MySQL Database
+  # PostgreSQL + PostGIS Database
   db:
-    image: mysql:8.0
+    image: postgis/postgis:15-3.3
     container_name: alvorada_db
     ports:
-      - "3306:3306"
+      - "5432:5432"
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
       - ./sql:/docker-entrypoint-initdb.d
     networks:
       - alvorada_network
 
-  # phpMyAdmin for easy database management
-  phpmyadmin:
-    image: phpmyadmin:latest
-    container_name: alvorada_phpmyadmin
+  # pgAdmin for PostgreSQL management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: alvorada_pgadmin
     ports:
       - "8081:80"
     environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      PGADMIN_DEFAULT_EMAIL: admin@alvorada.com
+      PGADMIN_DEFAULT_PASSWORD: ${DB_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     depends_on:
       - db
     networks:

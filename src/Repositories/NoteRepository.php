@@ -2,22 +2,28 @@
 
 namespace App\Repositories;
 
-use App\Config\Database;
+use App\Contracts\DatabaseInterface;
+use App\Contracts\NoteRepositoryInterface;
 use App\Models\Note;
 use PDOException;
 
 /**
  * Note Repository
  * Handles all database operations for notes
- * Implements Repository Pattern for data access
+ * Implements Repository Pattern with Dependency Injection
  */
-class NoteRepository
+class NoteRepository implements NoteRepositoryInterface
 {
-    private Database $db;
+    private DatabaseInterface $db;
 
-    public function __construct()
+    /**
+     * Constructor with Dependency Injection
+     * 
+     * @param DatabaseInterface $db
+     */
+    public function __construct(DatabaseInterface $db)
     {
-        $this->db = Database::getInstance();
+        $this->db = $db;
     }
 
     /**

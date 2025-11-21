@@ -2,33 +2,49 @@
 
 namespace App\Repositories;
 
-use App\Config\Database;
+use App\Contracts\DatabaseInterface;
+use App\Contracts\NoteRepositoryInterface;
+use App\Contracts\PropertyRepositoryInterface;
 use App\Models\Property;
 use PDOException;
 
 /**
  * Property Repository
  * Handles all database operations for properties
- * Implements Repository Pattern for data access
+ * Implements Repository Pattern with Dependency Injection
  */
-class PropertyRepository
+class PropertyRepository implements PropertyRepositoryInterface
 {
-    private Database $db;
-    private NoteRepository $noteRepository;
+    private DatabaseInterface $db;
+    private NoteRepositoryInterface $noteRepository;
 
-    public function __construct()
-    {
-        $this->db = Database::getInstance();
-        $this->noteRepository = new NoteRepository();
+    /**
+     * Constructor with Dependency Injection
+     * 
+     * @param DatabaseInterface $db
+     * @param NoteRepositoryInterface $noteRepository
+     */
+    public function __construct(
+        DatabaseInterface $db,
+        NoteRepositoryInterface $noteRepository
+    ) {
+        $this->db = $db;
+        $this->noteRepository = $noteRepository;
     }
 
     /**
-     * Find property by ID
+     * Find property by ID (with PostGIS location)
      */
     public function findById(int $id): ?Property
     {
         try {
-            $query = "SELECT * FROM properties WHERE id = :id LIMIT 1";
+            // Extract lat/lon from PostGIS geography type
+            $query = "SELECT 
+                        id, name, address, 
+                        ST_Y(location::geometry) as latitude,
+                        ST_X(location::geometry) as longitude,
+                        extra_field, created_at, updated_at
+                      FROM properties WHERE id = :id LIMIT 1";
             $result = $this->db->fetchOne($query, ['id' => $id]);
 
             if ($result) {
@@ -49,12 +65,19 @@ class PropertyRepository
     }
 
     /**
-     * Find all properties
+     * Find all properties (with PostGIS location)
      */
     public function findAll(int $limit = 100, int $offset = 0): array
     {
         try {
-            $query = "SELECT * FROM properties ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+            $query = "SELECT 
+                        id, name, address,
+                        ST_Y(location::geometry) as latitude,
+                        ST_X(location::geometry) as longitude,
+                        extra_field, created_at, updated_at
+                      FROM properties 
+                      ORDER BY created_at DESC 
+                      LIMIT :limit OFFSET :offset";
             $results = $this->db->fetchAll($query, [
                 'limit' => $limit,
                 'offset' => $offset
@@ -76,13 +99,14 @@ class PropertyRepository
     }
 
     /**
-     * Create new property
+     * Create new property with PostGIS location
      */
     public function create(Property $property): Property
     {
         try {
-            $query = "INSERT INTO properties (name, address, latitude, longitude, extra_field) 
-                      VALUES (:name, :address, :latitude, :longitude, :extra_field)";
+            // Use PostGIS ST_SetSRID and ST_MakePoint for proper geospatial storage
+            $query = "INSERT INTO properties (name, address, location, extra_field) 
+                      VALUES (:name, :address, ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography, :extra_field::jsonb)";
             
             $params = [
                 'name' => $property->getName(),
@@ -103,7 +127,7 @@ class PropertyRepository
     }
 
     /**
-     * Update existing property
+     * Update existing property (with PostGIS location)
      */
     public function update(Property $property): bool
     {
@@ -111,9 +135,8 @@ class PropertyRepository
             $query = "UPDATE properties 
                       SET name = :name, 
                           address = :address, 
-                          latitude = :latitude, 
-                          longitude = :longitude, 
-                          extra_field = :extra_field 
+                          location = ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+                          extra_field = :extra_field::jsonb
                       WHERE id = :id";
             
             $params = [
@@ -180,6 +203,104 @@ class PropertyRepository
             return (int) $result['total'];
         } catch (PDOException $e) {
             error_log("PropertyRepository::count Error: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Find properties within radius (PostGIS spatial query)
+     * 
+     * @param float $latitude Center latitude
+     * @param float $longitude Center longitude
+     * @param int $radiusMeters Radius in meters
+     * @return array Properties within radius with distance
+     */
+    public function findWithinRadius(float $latitude, float $longitude, int $radiusMeters): array
+    {
+        try {
+            $query = "SELECT 
+                        id, name, address,
+                        ST_Y(location::geometry) as latitude,
+                        ST_X(location::geometry) as longitude,
+                        extra_field, created_at, updated_at,
+                        ST_Distance(
+                            location,
+                            ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
+                        ) as distance_meters
+                      FROM properties
+                      WHERE ST_DWithin(
+                        location,
+                        ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography,
+                        :radius
+                      )
+                      ORDER BY distance_meters";
+            
+            $results = $this->db->fetchAll($query, [
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'radius' => $radiusMeters
+            ]);
+
+            $properties = [];
+            foreach ($results as $result) {
+                $property = new Property($result);
+                $properties[] = [
+                    'property' => $property,
+                    'distance_meters' => (float) $result['distance_meters'],
+                    'distance_km' => round((float) $result['distance_meters'] / 1000, 2)
+                ];
+            }
+
+            return $properties;
+        } catch (PDOException $e) {
+            error_log("PropertyRepository::findWithinRadius Error: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Find nearest properties to a location
+     * 
+     * @param float $latitude
+     * @param float $longitude
+     * @param int $limit Number of properties to return
+     * @return array
+     */
+    public function findNearest(float $latitude, float $longitude, int $limit = 10): array
+    {
+        try {
+            $query = "SELECT 
+                        id, name, address,
+                        ST_Y(location::geometry) as latitude,
+                        ST_X(location::geometry) as longitude,
+                        extra_field, created_at, updated_at,
+                        ST_Distance(
+                            location,
+                            ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
+                        ) as distance_meters
+                      FROM properties
+                      ORDER BY location <-> ST_SetSRID(ST_MakePoint(:longitude, :latitude), 4326)::geography
+                      LIMIT :limit";
+            
+            $results = $this->db->fetchAll($query, [
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'limit' => $limit
+            ]);
+
+            $properties = [];
+            foreach ($results as $result) {
+                $property = new Property($result);
+                $properties[] = [
+                    'property' => $property,
+                    'distance_meters' => (float) $result['distance_meters'],
+                    'distance_km' => round((float) $result['distance_meters'] / 1000, 2)
+                ];
+            }
+
+            return $properties;
+        } catch (PDOException $e) {
+            error_log("PropertyRepository::findNearest Error: " . $e->getMessage());
             throw $e;
         }
     }

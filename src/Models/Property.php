@@ -4,7 +4,7 @@ namespace App\Models;
 
 /**
  * Property Model
- * Represents a property entity with validation
+ * Represents a property entity with PostGIS geolocation support
  */
 class Property
 {
@@ -26,7 +26,7 @@ class Property
     }
 
     /**
-     * Hydrate model from array
+     * Hydrate model from array (handles PostGIS data)
      */
     public function hydrate(array $data): self
     {
@@ -39,15 +39,27 @@ class Property
         if (isset($data['address'])) {
             $this->address = $data['address'];
         }
+        
+        // Handle PostGIS location field
+        if (isset($data['location'])) {
+            $this->parsePostGISLocation($data['location']);
+        }
+        
+        // Fallback to separate lat/lon if provided
         if (isset($data['latitude'])) {
             $this->latitude = (float) $data['latitude'];
         }
         if (isset($data['longitude'])) {
             $this->longitude = (float) $data['longitude'];
         }
+        
+        // Handle JSONB extra_field
         if (isset($data['extra_field'])) {
-            $this->extraField = $data['extra_field'];
+            $this->extraField = is_string($data['extra_field']) 
+                ? $data['extra_field'] 
+                : json_encode($data['extra_field']);
         }
+        
         if (isset($data['created_at'])) {
             $this->createdAt = $data['created_at'];
         }
@@ -56,6 +68,24 @@ class Property
         }
 
         return $this;
+    }
+
+    /**
+     * Parse PostGIS location to lat/lon
+     * Handles various PostGIS formats
+     */
+    private function parsePostGISLocation(string $location): void
+    {
+        // PostGIS returns in format: POINT(longitude latitude)
+        // or in binary format that needs conversion
+        
+        if (preg_match('/POINT\(([0-9.\-]+)\s+([0-9.\-]+)\)/', $location, $matches)) {
+            $this->longitude = (float) $matches[1];
+            $this->latitude = (float) $matches[2];
+        } elseif (preg_match('/([0-9.\-]+),([0-9.\-]+)/', $location, $matches)) {
+            $this->latitude = (float) $matches[1];
+            $this->longitude = (float) $matches[2];
+        }
     }
 
     /**
@@ -69,11 +99,24 @@ class Property
             'address' => $this->address,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
-            'extra_field' => $this->extraField,
+            'extra_field' => $this->getExtraFieldAsArray(),
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
             'notes' => array_map(fn($note) => $note->toArray(), $this->notes)
         ];
+    }
+
+    /**
+     * Get extra field as array
+     */
+    public function getExtraFieldAsArray(): ?array
+    {
+        if ($this->extraField === null) {
+            return null;
+        }
+        
+        $decoded = json_decode($this->extraField, true);
+        return json_last_error() === JSON_ERROR_NONE ? $decoded : null;
     }
 
     /**
@@ -140,6 +183,14 @@ class Property
         return $this;
     }
 
+    /**
+     * Get coordinates as PostGIS format
+     */
+    public function getLocationAsPostGIS(): string
+    {
+        return "POINT({$this->longitude} {$this->latitude})";
+    }
+
     public function getExtraField(): ?string
     {
         return $this->extraField;
@@ -178,5 +229,3 @@ class Property
         return $this;
     }
 }
-
-

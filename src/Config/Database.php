@@ -2,6 +2,7 @@
 
 namespace App\Config;
 
+use App\Contracts\DatabaseInterface;
 use PDO;
 use PDOException;
 
@@ -9,8 +10,9 @@ use PDOException;
  * Database Connection Class
  * Singleton pattern to ensure only one database connection exists
  * Provides PDO connection with prepared statement support
+ * Implements DatabaseInterface for loose coupling
  */
-class Database
+class Database implements DatabaseInterface
 {
     private static ?Database $instance = null;
     private ?PDO $connection = null;
@@ -19,17 +21,20 @@ class Database
     private string $dbName;
     private string $username;
     private string $password;
-    private string $charset = 'utf8mb4';
+    private string $charset;
 
     /**
      * Private constructor to prevent direct instantiation
      */
     private function __construct()
     {
-        $this->host = getenv('DB_HOST') ?: 'db';
-        $this->dbName = getenv('DB_NAME') ?: 'alvorada_db';
-        $this->username = getenv('DB_USER') ?: 'alvorada_user';
-        $this->password = getenv('DB_PASSWORD') ?: 'alvorada_password';
+        $config = AppConfig::getInstance();
+        
+        $this->host = $config->get('database.host');
+        $this->dbName = $config->get('database.name');
+        $this->username = $config->get('database.user');
+        $this->password = $config->get('database.password');
+        $this->charset = $config->get('database.charset');
     }
 
     /**
@@ -61,7 +66,8 @@ class Database
     private function connect(): void
     {
         try {
-            $dsn = "mysql:host={$this->host};dbname={$this->dbName};charset={$this->charset}";
+            // PostgreSQL connection string
+            $dsn = "pgsql:host={$this->host};dbname={$this->dbName};options='--client_encoding=UTF8'";
             
             $options = [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -71,6 +77,9 @@ class Database
             ];
 
             $this->connection = new PDO($dsn, $this->username, $this->password, $options);
+            
+            // Enable PostGIS extension if not already enabled
+            $this->connection->exec("CREATE EXTENSION IF NOT EXISTS postgis");
         } catch (PDOException $e) {
             error_log("Database Connection Error: " . $e->getMessage());
             throw new PDOException("Database connection failed. Please check your configuration.");
