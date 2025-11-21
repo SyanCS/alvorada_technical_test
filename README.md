@@ -239,7 +239,35 @@ docker exec alvorada_db psql -U alvorada_user -d alvorada_db -c "\dt"
  public | properties | table | alvorada_user
 ```
 
-### Step 6: Access the Application
+### Step 6: Seed Sample Data (Optional)
+
+Populate the database with 36 sample US properties:
+
+```bash
+# Seed all properties (takes ~1 minute due to rate limiting)
+php scripts/seed_properties.php
+
+# Seed only 10 properties
+php scripts/seed_properties.php --count=10
+
+# Seed 5 properties with sample notes
+php scripts/seed_properties.php --count=5 --with-notes
+
+# View help
+php scripts/seed_properties.php --help
+```
+
+**Sample Properties Include:**
+- Famous landmarks (Empire State Building, Statue of Liberty, Golden Gate Bridge)
+- Tech company HQs (Apple, Google, Microsoft, Meta, Amazon, Tesla)
+- Government buildings (White House, US Capitol, Pentagon)
+- Universities (Harvard, MIT, Stanford, Yale)
+- Sports venues (Yankee Stadium, Wrigley Field, Fenway Park)
+- Entertainment (Disneyland, Universal Studios, Las Vegas casinos)
+- Airports (LAX, JFK, O'Hare)
+- Historic sites (Alamo, Mount Rushmore, Independence Hall)
+
+### Step 7: Access the Application
 
 Open your web browser and navigate to:
 
@@ -851,6 +879,9 @@ docker compose logs -f
 # Restart application
 docker compose restart
 
+# Seed sample data
+php scripts/seed_properties.php --count=10
+
 # Access database CLI
 docker exec -it alvorada_db psql -U alvorada_user -d alvorada_db
 
@@ -862,6 +893,9 @@ docker compose ps
 
 # Rebuild containers
 docker compose up -d --build
+
+# Clear all data (⚠️ destructive)
+docker exec alvorada_db psql -U alvorada_user -d alvorada_db -c "TRUNCATE properties, notes CASCADE;"
 
 # View application
 open http://localhost:8080  # Mac
