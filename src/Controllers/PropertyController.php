@@ -72,7 +72,7 @@ class PropertyController
             View::render('property/success', [
                 'title' => 'Property Created - Alvorada',
                 'property' => $property->toArray(),
-                'mapUrl' => "/public/map.html?id={$property->getId()}"
+                'mapUrl' => "/map.html?id={$property->getId()}"
             ]);
 
         } catch (ValidationException $e) {
@@ -117,7 +117,7 @@ class PropertyController
                 'success' => true,
                 'message' => 'Property created successfully!',
                 'property' => $property->toArray(),
-                'redirect' => "/public/map.html?id={$property->getId()}"
+                'redirect' => "/map.html?id={$property->getId()}"
             ]);
 
         } catch (ValidationException $e) {

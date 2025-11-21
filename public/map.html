@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Map - Alvorada</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-controls input,
+        .filter-controls select,
+        .filter-controls button {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .filter-controls input:focus,
+        .filter-controls select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-controls button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+
+        .filter-controls button:hover {
+            transform: translateY(-2px);
+        }
+
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+        
+        /* Ensure Leaflet tiles load properly */
+        .leaflet-container {
+            height: 100%;
+            width: 100%;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .property-popup {
+            max-width: 300px;
+        }
+
+        .property-popup h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .property-popup p {
+            color: #666;
+            font-size: 13px;
+            margin: 5px 0;
+        }
+
+        .property-popup .coordinates {
+            color: #999;
+            font-size: 11px;
+            font-family: monospace;
+            margin-top: 8px;
+        }
+
+        .property-popup .view-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .property-popup .view-link:hover {
+            opacity: 0.9;
+        }
+
+        .error {
+            background: #fee;
+            border: 2px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            #map {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🗺️ Alvorada Property Map</h1>
+            <div class="nav-links">
+                <a href="/">🏠 Add Property</a>
+                <a href="/map.html">🗺️ View Map</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <div class="stats" id="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Total Properties</div>
+                    <div class="stat-value" id="totalProperties">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Visible on Map</div>
+                    <div class="stat-value" id="visibleProperties">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Map Zoom Level</div>
+                    <div class="stat-value" id="zoomLevel">2</div>
+                </div>
+            </div>
+
+            <div class="filter-controls">
+                <input type="text" id="searchInput" placeholder="🔍 Search properties..." />
+                <button id="resetBtn">🔄 Reset View</button>
+                <button id="fitBoundsBtn">📍 Fit All Markers</button>
+                <button id="refreshBtn">🔃 Refresh Data</button>
+            </div>
+        </div>
+
+        <div id="loadingContainer" class="loading">
+            <div class="spinner"></div>
+            <p>Loading properties...</p>
+        </div>
+
+        <div id="map" style="display: none;"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+    
+    <!-- Leaflet MarkerCluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // Global variables
+        let map;
+        let markers = [];
+        let markerClusterGroup;
+        let allProperties = [];
+
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([39.8283, -98.5795], 4); // Center of USA
+
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Force map to invalidate size after initialization
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 100);
+
+            // Initialize marker cluster group
+            markerClusterGroup = L.markerClusterGroup({
+                chunkedLoading: true,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                zoomToBoundsOnClick: true
+            });
+            map.addLayer(markerClusterGroup);
+
+            // Update zoom level display
+            map.on('zoomend', function() {
+                document.getElementById('zoomLevel').textContent = map.getZoom();
+            });
+
+            // Update visible properties count on moveend
+            map.on('moveend', updateVisibleCount);
+        }
+
+        // Fetch properties from API
+        async function fetchProperties() {
+            try {
+                const response = await fetch('/api/properties.php');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                if (data.success) {
+                    allProperties = data.properties;
+                    displayProperties(allProperties);
+                    updateStats();
+                } else {
+                    throw new Error(data.message || 'Failed to load properties');
+                }
+            } catch (error) {
+                console.error('Error fetching properties:', error);
+                showError('Failed to load properties. Please try again later.');
+            }
+        }
+
+        // Display properties on map
+        function displayProperties(properties) {
+            // Clear existing markers
+            markerClusterGroup.clearLayers();
+            markers = [];
+
+            if (properties.length === 0) {
+                document.getElementById('loadingContainer').innerHTML = 
+                    '<p>No properties found. <a href="/">Add your first property!</a></p>';
+                return;
+            }
+
+            // Add markers for each property
+            properties.forEach(property => {
+                if (property.latitude && property.longitude) {
+                    const marker = L.marker([property.latitude, property.longitude])
+                        .bindPopup(createPopupContent(property));
+                    
+                    markers.push({marker, property});
+                    markerClusterGroup.addLayer(marker);
+                }
+            });
+
+            // Show map, hide loading
+            document.getElementById('loadingContainer').style.display = 'none';
+            document.getElementById('map').style.display = 'block';
+
+            // Force map to recalculate size after showing
+            setTimeout(function() {
+                map.invalidateSize();
+                
+                // Check if we should focus on a specific property
+                const urlParams = new URLSearchParams(window.location.search);
+                const propertyId = urlParams.get('id');
+                
+                if (propertyId) {
+                    focusOnProperty(parseInt(propertyId));
+                } else if (markers.length > 0) {
+                    // Fit bounds to show all markers
+                    fitAllMarkers();
+                }
+            }, 100);
+        }
+
+        // Create popup content
+        function createPopupContent(property) {
+            const noteCount = property.notes ? property.notes.length : 0;
+            const createdDate = new Date(property.created_at).toLocaleDateString();
+            
+            return `
+                <div class="property-popup">
+                    <h3>🏢 ${escapeHtml(property.name)}</h3>
+                    <p><strong>📍 Address:</strong><br>${escapeHtml(property.address)}</p>
+                    <p><strong>📅 Added:</strong> ${createdDate}</p>
+                    <p><strong>📝 Notes:</strong> ${noteCount}</p>
+                    <div class="coordinates">
+                        ${property.latitude.toFixed(6)}, ${property.longitude.toFixed(6)}
+                    </div>
+                    <a href="/api/property.php?id=${property.id}" target="_blank" class="view-link">
+                        View Details →
+                    </a>
+                </div>
+            `;
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('totalProperties').textContent = allProperties.length;
+            updateVisibleCount();
+        }
+
+        // Update visible properties count
+        function updateVisibleCount() {
+            if (!map) return;
+            
+            const bounds = map.getBounds();
+            const visible = markers.filter(({property}) => 
+                bounds.contains([property.latitude, property.longitude])
+            );
+            document.getElementById('visibleProperties').textContent = visible.length;
+        }
+
+        // Search properties
+        function searchProperties(query) {
+            if (!query) {
+                displayProperties(allProperties);
+                return;
+            }
+
+            const filtered = allProperties.filter(property => 
+                property.name.toLowerCase().includes(query.toLowerCase()) ||
+                property.address.toLowerCase().includes(query.toLowerCase())
+            );
+
+            displayProperties(filtered);
+        }
+
+        // Fit all markers in view
+        function fitAllMarkers() {
+            if (markers.length === 0) return;
+
+            const group = new L.featureGroup(markers.map(m => m.marker));
+            map.fitBounds(group.getBounds().pad(0.1));
+        }
+
+        // Focus on a specific property by ID
+        function focusOnProperty(propertyId) {
+            const markerData = markers.find(m => m.property.id === propertyId);
+            
+            if (markerData) {
+                const {marker, property} = markerData;
+                
+                // Zoom to the marker
+                map.setView([property.latitude, property.longitude], 15);
+                
+                // Open the popup
+                setTimeout(() => {
+                    marker.openPopup();
+                    
+                    // Highlight in UI
+                    const searchInput = document.getElementById('searchInput');
+                    searchInput.value = property.name;
+                    searchInput.style.background = '#fff3cd';
+                    searchInput.style.borderColor = '#ffc107';
+                    
+                    setTimeout(() => {
+                        searchInput.style.background = '';
+                        searchInput.style.borderColor = '';
+                    }, 2000);
+                }, 500);
+            } else {
+                // Property not found, show all
+                console.warn(`Property with ID ${propertyId} not found`);
+                if (markers.length > 0) {
+                    fitAllMarkers();
+                }
+            }
+        }
+
+        // Reset map view
+        function resetView() {
+            map.setView([39.8283, -98.5795], 4);
+        }
+
+        // Show error message
+        function showError(message) {
+            document.getElementById('loadingContainer').innerHTML = 
+                `<div class="error">❌ ${message}</div>`;
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchProperties(e.target.value);
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', resetView);
+        document.getElementById('fitBoundsBtn').addEventListener('click', fitAllMarkers);
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            document.getElementById('loadingContainer').style.display = 'block';
+            document.getElementById('map').style.display = 'none';
+            fetchProperties();
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            fetchProperties();
+        });
+    </script>
+</body>
+</html>
+
