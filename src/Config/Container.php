@@ -5,10 +5,12 @@ namespace App\Config;
 use App\Contracts\DatabaseInterface;
 use App\Contracts\NoteRepositoryInterface;
 use App\Contracts\PropertyRepositoryInterface;
+use App\Controllers\PropertyController;
 use App\Repositories\NoteRepository;
 use App\Repositories\PropertyRepository;
 use App\Services\GeolocationService;
 use App\Services\HttpClient;
+use App\Services\PropertyService;
 use App\Validators\PropertyValidator;
 
 /**
@@ -79,6 +81,22 @@ class Container
         // Register HttpClient
         $this->bind(HttpClient::class, function () {
             return new HttpClient();
+        });
+
+        // Register PropertyService (business logic layer)
+        $this->bind(PropertyService::class, function () {
+            return new PropertyService(
+                $this->get(PropertyRepositoryInterface::class),
+                $this->get(GeolocationService::class),
+                $this->get(PropertyValidator::class)
+            );
+        });
+
+        // Register PropertyController (thin controller)
+        $this->bind(PropertyController::class, function () {
+            return new PropertyController(
+                $this->get(PropertyService::class)
+            );
         });
     }
 

@@ -43,6 +43,30 @@ class NoteRepository implements NoteRepositoryInterface
     }
 
     /**
+     * Find all notes with pagination
+     */
+    public function findAll(int $limit = 100, int $offset = 0): array
+    {
+        try {
+            $query = "SELECT * FROM notes ORDER BY created_at DESC LIMIT :limit OFFSET :offset";
+            $results = $this->db->fetchAll($query, [
+                'limit' => $limit,
+                'offset' => $offset
+            ]);
+
+            $notes = [];
+            foreach ($results as $result) {
+                $notes[] = new Note($result);
+            }
+
+            return $notes;
+        } catch (PDOException $e) {
+            error_log("NoteRepository::findAll Error: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
      * Find all notes for a property
      */
     public function findByPropertyId(int $propertyId): array
