@@ -1,37 +1,12 @@
 # Alvorada Property Research System - Architecture Overview
 
 ## Table of Contents
-1. [System Overview](#system-overview)
-2. [Architecture Patterns](#architecture-patterns)
-3. [Folder Structure](#folder-structure)
-4. [Complete Request Flow](#complete-request-flow)
-5. [Layer-by-Layer Breakdown](#layer-by-layer-breakdown)
-6. [Data Flow Diagram](#data-flow-diagram)
-7. [Key Design Decisions](#key-design-decisions)
-
----
-
-## System Overview
-
-The Alvorada Property Research System is a modern PHP application built with clean architecture principles. It manages properties with geolocation features using PostgreSQL with PostGIS extension for spatial queries.
-
-**Technology Stack:**
-- **Backend**: PHP 8.2+
-- **Database**: PostgreSQL 15 with PostGIS extension
-- **Web Server**: Apache with mod_rewrite
-- **Frontend**: Vanilla JavaScript with Leaflet.js for maps
-- **External API**: OpenStreetMap Nominatim for geocoding
-- **Containerization**: Docker with docker-compose
-
-**Core Features:**
-- Property creation with automatic address geocoding
-- Geospatial data storage using PostGIS geography types
-- Address enrichment with metadata (OSM place_id, type, bounding box)
-- Duplicate detection (by name, address, and location)
-- Notes system for property annotations
-- Interactive map visualization
-- RESTful API endpoints
-- Proximity-based property search
+1. [Architecture Patterns](#architecture-patterns)
+2. [Folder Structure](#folder-structure)
+3. [Complete Request Flow](#complete-request-flow)
+4. [Layer-by-Layer Breakdown](#layer-by-layer-breakdown)
+5. [Data Flow Diagram](#data-flow-diagram)
+6. [Key Design Decisions](#key-design-decisions)
 
 ---
 
