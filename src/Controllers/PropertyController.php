@@ -144,9 +144,10 @@ class PropertyController
 
     /**
      * Get property by ID
+     * Returns array for API use
      * 
      * @param int $id
-     * @return array HTTP response
+     * @return array Response data
      */
     public function show(int $id): array
     {
@@ -171,6 +172,28 @@ class PropertyController
                 'message' => 'Failed to retrieve property',
                 'error' => $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Get property by ID and render as JSON
+     * For API endpoints
+     */
+    public function showJson(int $id): void
+    {
+        $result = $this->show($id);
+        
+        if ($result['success']) {
+            View::json([
+                'success' => true,
+                'property' => $result['property']
+            ]);
+        } else {
+            $statusCode = $result['error'] === 'NOT_FOUND' ? 404 : 500;
+            View::json([
+                'success' => false,
+                'message' => $result['message']
+            ], $statusCode);
         }
     }
 
