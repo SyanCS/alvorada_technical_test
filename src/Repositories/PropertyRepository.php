@@ -5,7 +5,9 @@ namespace App\Repositories;
 use App\Contracts\DatabaseInterface;
 use App\Contracts\NoteRepositoryInterface;
 use App\Contracts\PropertyRepositoryInterface;
+use App\Exceptions\DatabaseException;
 use App\Models\Property;
+use PDO;
 use PDOException;
 
 /**
