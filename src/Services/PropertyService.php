@@ -53,7 +53,15 @@ class PropertyService
             );
         }
 
-        // 3. Geocode address using external API
+        // 3. Check for duplicate name
+        if ($this->checkDuplicateName($data['name'])) {
+            throw new ValidationException(
+                "Duplicate property found",
+                ['name' => 'A property with this name already exists']
+            );
+        }
+
+        // 4. Geocode address using external API
         try {
             $geoData = $this->geolocationService->geocodeAddress($data['address']);
         } catch (Exception $e) {
@@ -64,20 +72,97 @@ class PropertyService
             );
         }
 
-        // 4. Create and populate property model
+        // 5. Check for duplicate address (after geocoding for normalized address)
+        $normalizedAddress = $geoData['display_name'] ?? $data['address'];
+        if ($this->checkDuplicateAddress($normalizedAddress)) {
+            throw new ValidationException(
+                "Duplicate property found",
+                ['address' => 'A property with this address already exists']
+            );
+        }
+
+        // 6. Create and populate property model
         $property = new Property();
         $property->setName($data['name']);
-        $property->setAddress($geoData['display_name'] ?? $data['address']);
+        $property->setAddress($normalizedAddress);
         $property->setLatitude($geoData['latitude']);
         $property->setLongitude($geoData['longitude']);
         $property->setExtraField($geoData['extra_field']);
 
-        // 5. Persist to database
+        // 7. Check for duplicate location (within 10 meters)
+        $duplicateByLocation = $this->checkDuplicateLocation(
+            $property->getLatitude(),
+            $property->getLongitude()
+        );
+        
+        if ($duplicateByLocation) {
+            throw new ValidationException(
+                "Duplicate property found",
+                ['location' => sprintf(
+                    'A property already exists at this location: "%s"',
+                    $duplicateByLocation->getName()
+                )]
+            );
+        }
+
+        // 8. Persist to database
         try {
             return $this->propertyRepository->create($property);
         } catch (Exception $e) {
             error_log("PropertyService::createProperty - Database error: " . $e->getMessage());
             throw new Exception("Failed to save property to database", 0, $e);
+        }
+    }
+    
+    /**
+     * Check if property name already exists
+     * 
+     * @param string $name Property name
+     * @return bool True if duplicate exists
+     */
+    private function checkDuplicateName(string $name): bool
+    {
+        try {
+            return $this->propertyRepository->existsByName($name);
+        } catch (Exception $e) {
+            // If check fails, log and continue (don't block creation)
+            error_log("PropertyService::checkDuplicateName Error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if property address already exists
+     * 
+     * @param string $address Property address
+     * @return bool True if duplicate exists
+     */
+    private function checkDuplicateAddress(string $address): bool
+    {
+        try {
+            return $this->propertyRepository->existsByAddress($address);
+        } catch (Exception $e) {
+            // If check fails, log and continue (don't block creation)
+            error_log("PropertyService::checkDuplicateAddress Error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Check if property location already exists (within 10 meters)
+     * 
+     * @param float $latitude Latitude
+     * @param float $longitude Longitude
+     * @return Property|null Existing property if found
+     */
+    private function checkDuplicateLocation(float $latitude, float $longitude): ?Property
+    {
+        try {
+            return $this->propertyRepository->findByLocation($latitude, $longitude, 10);
+        } catch (Exception $e) {
+            // If check fails, log and continue (don't block creation)
+            error_log("PropertyService::checkDuplicateLocation Error: " . $e->getMessage());
+            return null;
         }
     }
 

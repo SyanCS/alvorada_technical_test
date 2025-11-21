@@ -6,28 +6,43 @@ use App\Models\Property;
 
 /**
  * Property Repository Interface
- * Contract for property repository implementations
+ * Defines contract for property data access
  */
 interface PropertyRepositoryInterface extends RepositoryInterface
 {
     /**
-     * Create new property
+     * Find properties near a location
+     * 
+     * @param float $latitude
+     * @param float $longitude
+     * @param int $radiusMeters Search radius in meters
+     * @return Property[]
      */
-    public function create(Property $property): Property;
-
+    public function findNearby(float $latitude, float $longitude, int $radiusMeters = 1000): array;
+    
     /**
-     * Update existing property
+     * Check if property name exists
+     * 
+     * @param string $name Property name
+     * @return bool
      */
-    public function update(Property $property): bool;
-
+    public function existsByName(string $name): bool;
+    
     /**
-     * Search properties by address
+     * Check if property address exists
+     * 
+     * @param string $address Property address
+     * @return bool
      */
-    public function searchByAddress(string $address): array;
-
+    public function existsByAddress(string $address): bool;
+    
     /**
-     * Count total properties
+     * Find property by location (within radius)
+     * 
+     * @param float $latitude
+     * @param float $longitude
+     * @param int $radiusMeters Search radius in meters
+     * @return Property|null
      */
-    public function count(): int;
+    public function findByLocation(float $latitude, float $longitude, int $radiusMeters = 10): ?Property;
 }
-

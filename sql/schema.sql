@@ -20,7 +20,11 @@ CREATE TABLE properties (
     location GEOGRAPHY(Point, 4326) NOT NULL, -- PostGIS point type (WGS 84)
     extra_field JSONB, -- JSON for additional data from geolocation API
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Unique constraints to prevent duplicates
+    CONSTRAINT unique_property_name UNIQUE (name),
+    CONSTRAINT unique_property_address UNIQUE (address)
 );
 
 -- Create spatial index on location for fast geo queries
@@ -28,6 +32,8 @@ CREATE INDEX idx_properties_location ON properties USING GIST(location);
 
 -- Create regular indexes
 CREATE INDEX idx_properties_created_at ON properties(created_at DESC);
+CREATE INDEX idx_properties_name ON properties(name);
+CREATE INDEX idx_properties_address ON properties(address);
 CREATE INDEX idx_properties_name ON properties(name);
 
 -- Create GIN index for JSONB extra_field

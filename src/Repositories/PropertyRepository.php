@@ -304,6 +304,152 @@ class PropertyRepository implements PropertyRepositoryInterface
             throw $e;
         }
     }
+    
+    /**
+     * Find properties near a location
+     * 
+     * @param float $latitude
+     * @param float $longitude
+     * @param int $radiusMeters Search radius in meters
+     * @return Property[]
+     */
+    public function findNearby(float $latitude, float $longitude, int $radiusMeters = 1000): array
+    {
+        try {
+            $stmt = $this->db->getConnection()->prepare("
+                SELECT 
+                    id,
+                    name,
+                    address,
+                    ST_Y(location::geometry) as latitude,
+                    ST_X(location::geometry) as longitude,
+                    extra_field,
+                    created_at,
+                    updated_at
+                FROM properties
+                WHERE ST_DWithin(
+                    location,
+                    ST_GeographyFromText('POINT(:longitude :latitude)'),
+                    :radius
+                )
+                ORDER BY ST_Distance(
+                    location,
+                    ST_GeographyFromText('POINT(:longitude :latitude)')
+                )
+            ");
+            
+            $stmt->execute([
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'radius' => $radiusMeters
+            ]);
+            
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            $properties = [];
+            foreach ($results as $data) {
+                $properties[] = $this->hydrate($data);
+            }
+            
+            return $properties;
+        } catch (PDOException $e) {
+            throw new DatabaseException("Failed to find nearby properties: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Check if property name exists
+     * 
+     * @param string $name Property name
+     * @return bool
+     */
+    public function existsByName(string $name): bool
+    {
+        try {
+            $stmt = $this->db->getConnection()->prepare(
+                "SELECT COUNT(*) FROM properties WHERE name = :name"
+            );
+            
+            $stmt->execute(['name' => $name]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (PDOException $e) {
+            throw new DatabaseException("Failed to check duplicate name: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Check if property address exists
+     * 
+     * @param string $address Property address
+     * @return bool
+     */
+    public function existsByAddress(string $address): bool
+    {
+        try {
+            $stmt = $this->db->getConnection()->prepare(
+                "SELECT COUNT(*) FROM properties WHERE address = :address"
+            );
+            
+            $stmt->execute(['address' => $address]);
+            
+            return $stmt->fetchColumn() > 0;
+        } catch (PDOException $e) {
+            throw new DatabaseException("Failed to check duplicate address: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Find property by location (within radius)
+     * 
+     * @param float $latitude
+     * @param float $longitude
+     * @param int $radiusMeters Search radius in meters (default 10m)
+     * @return Property|null
+     */
+    public function findByLocation(float $latitude, float $longitude, int $radiusMeters = 10): ?Property
+    {
+        try {
+            $stmt = $this->db->getConnection()->prepare("
+                SELECT 
+                    id,
+                    name,
+                    address,
+                    ST_Y(location::geometry) as latitude,
+                    ST_X(location::geometry) as longitude,
+                    extra_field,
+                    created_at,
+                    updated_at
+                FROM properties
+                WHERE ST_DWithin(
+                    location,
+                    ST_GeographyFromText('POINT(:longitude :latitude)'),
+                    :radius
+                )
+                ORDER BY ST_Distance(
+                    location,
+                    ST_GeographyFromText('POINT(:longitude :latitude)')
+                )
+                LIMIT 1
+            ");
+            
+            $stmt->execute([
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'radius' => $radiusMeters
+            ]);
+            
+            $data = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$data) {
+                return null;
+            }
+            
+            return $this->hydrate($data);
+        } catch (PDOException $e) {
+            throw new DatabaseException("Failed to find property by location: " . $e->getMessage());
+        }
+    }
 }
 
 
