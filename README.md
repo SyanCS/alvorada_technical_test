@@ -246,6 +246,20 @@ Open your web browser and navigate to:
 
 ## 📖 Usage Guide
 
+### 🎥 Video Demo
+
+Watch a complete walkthrough of the system in action:
+
+**[📹 System Usage Demo Video](https://drive.google.com/file/d/1_lMHlL4UP-EfphI6N-dRDQFrkAxP8Chl/view?usp=sharing)**
+
+This video demonstrates:
+- Adding properties with automatic geocoding
+- Viewing properties on the interactive map
+- Adding and managing research notes
+- Using the search and filtering features
+
+---
+
 ### Adding a Property
 
 1. **Navigate to the home page:** http://localhost:8080/
