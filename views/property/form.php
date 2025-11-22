@@ -130,7 +130,7 @@ h1 {
 
 <div class="form-card">
     <h2 style="margin-bottom: 20px; color: #333; font-size: 20px;">Add New Property</h2>
-    <form method="POST" action="/property/create">
+    <form method="POST" action="/index.php">
         <div class="form-group">
             <label for="name">Property Name</label>
             <input type="text" id="name" name="name" placeholder="e.g., Downtown Office Building" required minlength="2" maxlength="255">

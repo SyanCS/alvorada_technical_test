@@ -39,8 +39,9 @@ The application implements multiple design patterns for maintainability and scal
 - Ensures single instance of critical resources
 
 ### 6. **Front Controller Pattern**
-- Single entry point (`public/index.php`)
-- All requests routed through one file
+- Root entry point (`index.php`) for web routes
+- Separate API endpoints in `public/api/` for JSON responses
+- Hybrid approach: MVC for pages, standalone APIs for AJAX
 
 ### 7. **Interface Segregation**
 - Contracts define behavior
@@ -53,11 +54,11 @@ The application implements multiple design patterns for maintainability and scal
 ```
 alvorada_technical_test/
 │
-├── public/                          # Web root (document root)
-│   ├── index.php                    # Front controller - entry point
-│   ├── map.html                     # Interactive map interface
-│   ├── property.html                # Property detail page
-│   ├── api/                         # API endpoints
+├── index.php                        # Root entry point - handles form and property routes
+│
+├── public/                          # Static assets and API endpoints
+│   ├── map.html                     # Interactive map interface (SPA)
+│   ├── api/                         # API endpoints (JSON responses)
 │   │   ├── property.php             # GET single property
 │   │   ├── properties.php           # GET all properties
 │   │   ├── add_note.php             # POST add note
@@ -109,11 +110,12 @@ alvorada_technical_test/
 │       ├── NotFoundException.php
 │       └── DatabaseException.php
 │
-├── views/                           # View templates
+├── views/                           # View templates (server-side rendered)
 │   ├── layouts/
 │   │   └── main.php                 # Master layout
 │   └── property/
 │       ├── form.php                 # Property creation form
+│       ├── show.php                 # Property details page (MVC)
 │       ├── success.php              # Success page
 │       └── error.php                # Error page
 │
@@ -140,16 +142,15 @@ HTTP GET http://localhost/
 ```
 
 **Flow:**
-1. Apache routes to `public/index.php` (Front Controller)
+1. Apache routes to `index.php` (Root Entry Point)
 2. `Autoloader.php` is loaded - registers PSR-4 autoloader
 3. `Container::getInstance()` - initializes DI container
 4. Container registers all services and dependencies
-5. `Router` is created
-6. Routes are registered:
+5. Simple routing logic checks request path:
    - `GET /` → `PropertyController->showForm()`
-   - `POST /property/create` → `PropertyController->create()`
-7. `Router->dispatch()` matches current request
-8. Calls `PropertyController->showForm()`
+   - `GET /property?id=X` → `PropertyController->showProperty()`
+   - `POST /` → `PropertyController->create()`
+6. Calls `PropertyController->showForm()`
 
 **PropertyController->showForm():**
 ```php
@@ -182,12 +183,12 @@ public function showForm(): void
 
 #### **Step 2: User Submits Form**
 ```
-HTTP POST http://localhost/property/create
+HTTP POST http://localhost/
 Body: name=Downtown Office&address=123 Main St, New York, NY
 ```
 
 **Flow:**
-1. Router matches `POST /property/create`
+1. `index.php` detects POST request
 2. Calls `PropertyController->create()`
 
 **PropertyController->create():**
@@ -664,13 +665,26 @@ class Router
 
 **Usage in index.php:**
 ```php
-$router = new Router();
+// Get controller from container
 $propertyController = $container->get(PropertyController::class);
 
-$router->get('/', [$propertyController, 'showForm']);
-$router->post('/property/create', [$propertyController, 'create']);
+// Simple routing
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-$router->dispatch();
+// Route: /property?id=X - Show property details
+if ($requestUri === '/property' && isset($_GET['id'])) {
+    $propertyController->showProperty();
+    exit;
+}
+
+// Route: POST / - Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $propertyController->create();
+    exit;
+}
+
+// Route: GET / - Show the form
+$propertyController->showForm();
 ```
 
 ---
@@ -1095,6 +1109,48 @@ class PropertyController
         $this->propertyService = $propertyService;
     }
     
+    /**
+     * Show property creation form
+     */
+    public function showForm(): void
+    {
+        View::render('property/form', [
+            'title' => 'Add Property - Alvorada',
+            'dbStatus' => 'Connected Successfully!'
+        ]);
+    }
+    
+    /**
+     * Show property details page (server-side rendered)
+     */
+    public function showProperty(): void
+    {
+        $id = $_GET['id'] ?? null;
+        
+        if (!$id || !is_numeric($id)) {
+            View::render('property/error', [
+                'message' => 'Invalid property ID'
+            ]);
+            return;
+        }
+        
+        try {
+            $property = $this->propertyService->getProperty((int)$id);
+            
+            View::render('property/show', [
+                'title' => $property->getName() . ' - Alvorada',
+                'property' => $property->toArray()
+            ]);
+        } catch (NotFoundException $e) {
+            View::render('property/error', [
+                'message' => 'Property not found'
+            ]);
+        }
+    }
+    
+    /**
+     * Create new property
+     */
     public function create(): void
     {
         $data = [
@@ -1172,7 +1228,7 @@ class PropertyController
     <div class="status-value"><?php echo htmlspecialchars($dbStatus); ?></div>
 </div>
 
-<form method="POST" action="/property/create">
+<form method="POST" action="/index.php">
     <div class="form-group">
         <label for="name">Property Name</label>
         <input type="text" name="name" required minlength="2" maxlength="255">
@@ -1187,6 +1243,79 @@ class PropertyController
 </form>
 ```
 
+#### **views/property/show.php** (NEW - Server-Side Rendered)
+```php
+<?php
+$propertyData = $property;
+$notes = $propertyData['notes'] ?? [];
+?>
+
+<div class="property-details">
+    <div class="property-header">
+        <div class="property-name"><?php echo htmlspecialchars($propertyData['name']); ?></div>
+        <div class="property-address">📍 <?php echo htmlspecialchars($propertyData['address']); ?></div>
+    </div>
+
+    <div class="property-meta">
+        <div class="meta-item">
+            <div class="meta-label">Latitude</div>
+            <div class="meta-value"><?php echo number_format($propertyData['latitude'], 6); ?>°</div>
+        </div>
+        <div class="meta-item">
+            <div class="meta-label">Longitude</div>
+            <div class="meta-value"><?php echo number_format($propertyData['longitude'], 6); ?>°</div>
+        </div>
+        <div class="meta-item">
+            <div class="meta-label">Total Notes</div>
+            <div class="meta-value"><?php echo count($notes); ?></div>
+        </div>
+    </div>
+</div>
+
+<div class="notes-section">
+    <h3>📝 Notes</h3>
+    
+    <!-- Add note form with AJAX submission -->
+    <form id="addNoteForm">
+        <textarea name="note" required minlength="3"></textarea>
+        <button type="submit">✍️ Add Note</button>
+    </form>
+    
+    <!-- Display existing notes -->
+    <div class="notes-list">
+        <?php foreach ($notes as $note): ?>
+            <div class="note-item">
+                <div class="note-content"><?php echo htmlspecialchars($note['note']); ?></div>
+                <div class="note-meta">
+                    Added on <?php echo date('M j, Y \a\t g:i A', strtotime($note['created_at'])); ?>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+
+<script>
+// AJAX note submission
+document.getElementById('addNoteForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const noteText = e.target.note.value.trim();
+    
+    const response = await fetch('/api/add_note.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            property_id: <?php echo $propertyData['id']; ?>,
+            note: noteText
+        })
+    });
+    
+    if (response.ok) {
+        window.location.reload(); // Refresh to show new note
+    }
+});
+</script>
+```
+
 ---
 
 ## Data Flow Diagram
@@ -1199,19 +1328,14 @@ class PropertyController
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    PUBLIC/INDEX.PHP                              │
-│                   (Front Controller)                             │
+│                       INDEX.PHP                                  │
+│                   (Root Entry Point)                             │
 │  • Loads Autoloader                                              │
 │  • Initializes Container                                         │
-│  • Creates Router                                                │
-│  • Registers routes                                              │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         ROUTER                                   │
-│  • Matches HTTP method + path                                    │
-│  • Dispatches to controller                                      │
+│  • Simple routing logic:                                         │
+│    - GET /              → showForm()                             │
+│    - GET /property?id=X → showProperty()                         │
+│    - POST /             → create()                               │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              ▼
@@ -1380,6 +1504,176 @@ class PropertyController
   - Different error handling
   - Can add API-specific middleware
 - **Example**: property.php returns JSON, index.php returns HTML
+
+### 13. **MVC for Property Details vs Static SPA for Map**
+- **Decision**: 
+  - Property details page: Server-side rendered MVC (`/property?id=X` → `views/property/show.php`)
+  - Map interface: Static HTML SPA (`/map.html`)
+- **Rationale**:
+  - **Property Details (MVC):**
+    - Single property view - data available on server
+    - Better SEO - content indexed by search engines
+    - Faster initial load - one request instead of two
+    - Progressive enhancement - works without JavaScript
+    - Consistent with form architecture
+  - **Map Interface (Static SPA):**
+    - Multiple properties with heavy interactivity (zoom, pan, cluster)
+    - Requires JavaScript anyway (Leaflet.js)
+    - Real-time filtering and search
+    - Requirements explicitly specify "map.html"
+- **Example**: 
+  - `/property?id=1` → Server renders HTML with property data
+  - `/map.html` → Client fetches all properties via `/api/properties.php`
+
+### 14. **Root-Level index.php vs public/ Directory**
+- **Decision**: `index.php` at project root, not in `public/`
+- **Rationale**:
+  - Requirements explicitly state "index.php at root level"
+  - Simpler URL structure (`/` instead of `/public/`)
+  - Static assets still organized in `public/` directory
+  - `.htaccess` protects sensitive directories (`src/`, `views/`, `sql/`)
+- **Security**: Directory protection via `.htaccess` rules
+```apache
+# Protect sensitive directories
+RewriteRule ^(src|views|sql|scripts)/ - [F,L]
+```
+
+---
+
+## URL Routing Structure
+
+### Web Routes (HTML Responses)
+
+| Method | URL | Handler | Response |
+|--------|-----|---------|----------|
+| GET | `/` | `PropertyController::showForm()` | Property intake form |
+| POST | `/` | `PropertyController::create()` | Success/error page |
+| GET | `/property?id=1` | `PropertyController::showProperty()` | Property details page |
+| GET | `/map.html` | Static file | Interactive map (SPA) |
+
+### API Routes (JSON Responses)
+
+| Method | URL | File | Response |
+|--------|-----|------|----------|
+| GET | `/api/property.php?id=1` | `public/api/property.php` | Single property JSON |
+| GET | `/api/properties.php` | `public/api/properties.php` | All properties JSON |
+| POST | `/api/add_note.php` | `public/api/add_note.php` | Note creation result |
+| GET | `/api/notes.php?property_id=1` | `public/api/notes.php` | Property notes JSON |
+
+### Static Assets
+
+| URL Pattern | Location | Purpose |
+|-------------|----------|---------|
+| `/css/*` | `public/css/` | Stylesheets |
+| `/js/*` | `public/js/` | JavaScript files |
+| `/map.html` | `public/map.html` | Map interface |
+
+### Routing Implementation
+
+**index.php (Root Entry Point):**
+```php
+<?php
+require_once __DIR__ . '/src/Config/Autoloader.php';
+
+use App\Config\Container;
+use App\Controllers\PropertyController;
+
+$container = Container::getInstance();
+$propertyController = $container->get(PropertyController::class);
+
+// Get request path
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+
+// Route: /property?id=X - Show property details (MVC)
+if ($requestUri === '/property' && isset($_GET['id'])) {
+    $propertyController->showProperty();
+    exit;
+}
+
+// Route: POST / - Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $propertyController->create();
+    exit;
+}
+
+// Route: GET / - Show the form
+$propertyController->showForm();
+```
+
+**.htaccess (URL Rewriting):**
+```apache
+RewriteEngine On
+
+# Protect sensitive directories
+RewriteRule ^(src|views|sql|scripts)/ - [F,L]
+
+# API routes - route to public/api/ directory
+RewriteRule ^api/(.*)$ public/api/$1 [QSA,L]
+
+# Static assets from public directory
+RewriteRule ^(css|js)/(.*)$ public/$1/$2 [L]
+
+# Map HTML page from public directory
+RewriteRule ^(map\.html)$ public/$1 [L]
+
+# Default to index.php if file doesn't exist
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^$ index.php [L]
+
+# Prevent directory listing
+Options -Indexes
+```
+
+### User Flow Examples
+
+**1. Adding a Property:**
+```
+User → GET / 
+     → index.php 
+     → PropertyController::showForm() 
+     → views/property/form.php
+     → User sees form
+
+User → POST / (with form data)
+     → index.php
+     → PropertyController::create()
+     → PropertyService::createProperty()
+     → GeolocationService::geocodeAddress()
+     → PropertyRepository::create()
+     → views/property/success.php
+     → User sees success page with "View on Map" link
+```
+
+**2. Viewing Property Details:**
+```
+User → GET /property?id=1
+     → index.php
+     → PropertyController::showProperty()
+     → PropertyService::getProperty()
+     → PropertyRepository::findById()
+     → views/property/show.php (server-rendered)
+     → User sees property details with notes
+
+User → Submits note form (AJAX)
+     → POST /api/add_note.php
+     → Standalone API endpoint
+     → Returns JSON response
+     → Page reloads to show new note
+```
+
+**3. Viewing Map:**
+```
+User → GET /map.html
+     → Static HTML file served
+     → JavaScript loads
+     → AJAX GET /api/properties.php
+     → Returns all properties as JSON
+     → Leaflet.js renders markers on map
+     → User clicks marker
+     → Popup shows "View Details" link
+     → Links to /property?id=X
+```
 
 ---
 

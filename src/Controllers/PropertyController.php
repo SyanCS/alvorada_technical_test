@@ -176,6 +176,47 @@ class PropertyController
     }
 
     /**
+     * Show property details page (HTML view)
+     * Renders the property details with notes
+     */
+    public function showProperty(): void
+    {
+        $id = $_GET['id'] ?? null;
+
+        if (!$id || !is_numeric($id)) {
+            View::render('property/error', [
+                'title' => 'Error - Alvorada',
+                'message' => 'Invalid or missing property ID',
+                'backUrl' => '/'
+            ]);
+            return;
+        }
+
+        try {
+            $property = $this->propertyService->getProperty((int)$id);
+
+            View::render('property/show', [
+                'title' => htmlspecialchars($property->getName()) . ' - Alvorada',
+                'property' => $property->toArray()
+            ]);
+
+        } catch (NotFoundException $e) {
+            View::render('property/error', [
+                'title' => 'Property Not Found - Alvorada',
+                'message' => 'The requested property could not be found.',
+                'backUrl' => '/'
+            ]);
+        } catch (Exception $e) {
+            error_log("PropertyController::showProperty Error: " . $e->getMessage());
+            View::render('property/error', [
+                'title' => 'Error - Alvorada',
+                'message' => 'An error occurred while loading the property.',
+                'backUrl' => '/'
+            ]);
+        }
+    }
+
+    /**
      * Get property by ID and render as JSON
      * For API endpoints
      */

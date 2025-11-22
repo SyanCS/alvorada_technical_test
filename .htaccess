@@ -1,0 +1,29 @@
+RewriteEngine On
+
+# Protect sensitive directories
+RewriteRule ^(src|views|sql|scripts)/ - [F,L]
+
+# API routes - route to public/api/ directory
+RewriteRule ^api/(.*)$ public/api/$1 [QSA,L]
+
+# Static assets from public directory
+RewriteRule ^(css|js)/(.*)$ public/$1/$2 [L]
+
+# Map and property HTML pages from public directory
+RewriteRule ^(map\.html|property\.html)$ public/$1 [L]
+
+# Default to index.php if file doesn't exist
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^$ index.php [L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Prevent directory listing
+Options -Indexes
+

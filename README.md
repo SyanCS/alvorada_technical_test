@@ -83,6 +83,79 @@ A full-stack property research and management platform built with vanilla PHP, P
 └──────────────────────────────────────────────────────────┘
 ```
 
+### Project Structure
+
+```
+alvorada_technical_test/
+├── index.php                    # Main entry point - Property intake form
+├── .htaccess                    # Apache URL rewriting rules
+├── README.md                    # This file
+├── AI_PROPOSAL.md              # AI/LLM enhancement proposal
+├── API_DOCUMENTATION.md        # Complete API reference
+├── ARCHITECTURE_OVERVIEW.md    # Detailed architecture documentation
+├── REQUIREMENTS.md             # Original project requirements
+├── docker-compose.yml          # Docker services configuration
+├── Dockerfile                  # PHP + Apache container definition
+├── env.example                 # Environment variables template
+│
+├── public/                     # Static assets and API endpoints
+│   ├── api/                    # REST API endpoints
+│   │   ├── property.php        # GET /api/property.php?id={id}
+│   │   ├── properties.php      # GET /api/properties.php
+│   │   ├── add_note.php        # POST /api/add_note.php
+│   │   └── notes.php           # GET /api/notes.php?property_id={id}
+│   ├── css/                    # Stylesheets
+│   ├── js/                     # JavaScript files
+│   └── map.html                # Interactive map view (SPA)
+│
+├── src/                        # Application source code
+│   ├── Config/                 # Configuration classes
+│   │   ├── AppConfig.php       # Application configuration
+│   │   ├── Autoloader.php      # PSR-4 autoloader
+│   │   ├── Container.php       # Dependency injection container
+│   │   └── Database.php        # Database connection
+│   ├── Controllers/            # Request handlers
+│   │   └── PropertyController.php
+│   ├── Core/                   # Core framework components
+│   │   ├── Router.php          # URL routing
+│   │   └── View.php            # View rendering
+│   ├── Models/                 # Data models
+│   │   ├── Property.php
+│   │   └── Note.php
+│   ├── Repositories/           # Data access layer
+│   │   ├── PropertyRepository.php
+│   │   └── NoteRepository.php
+│   ├── Services/               # Business logic layer
+│   │   ├── PropertyService.php
+│   │   ├── NoteService.php
+│   │   └── GeolocationService.php
+│   ├── Contracts/              # Interfaces
+│   │   ├── PropertyRepositoryInterface.php
+│   │   └── NoteRepositoryInterface.php
+│   ├── Validators/             # Input validation
+│   │   ├── PropertyValidator.php
+│   │   └── NoteValidator.php
+│   └── Exceptions/             # Custom exceptions
+│       ├── ValidationException.php
+│       ├── DatabaseException.php
+│       └── GeolocationException.php
+│
+├── views/                      # PHP view templates
+│   ├── layouts/                # Layout templates
+│   │   └── main.php
+│   └── property/               # Property-related views
+│       ├── form.php            # Property intake form
+│       ├── show.php            # Property details page
+│       ├── success.php         # Success confirmation
+│       └── error.php           # Error page
+│
+├── sql/                        # Database schema
+│   └── schema.sql              # PostgreSQL + PostGIS schema
+│
+└── scripts/                    # Utility scripts
+    └── test_api.sh             # API testing script
+```
+
 ---
 
 ## 📦 Prerequisites
