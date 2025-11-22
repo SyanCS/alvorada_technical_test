@@ -57,6 +57,7 @@ alvorada_technical_test/
 ├── index.php                        # Root entry point - handles form and property routes
 │
 ├── api/                             # API endpoints (JSON responses)
+│   ├── db.php                       # Database helper functions
 │   ├── property.php                 # GET single property
 │   ├── properties.php               # GET all properties
 │   ├── add_note.php                 # POST add note
@@ -542,6 +543,65 @@ class Database implements DatabaseInterface
 - PDO with prepared statements (SQL injection prevention)
 - Helper methods for common operations
 - Automatic PostGIS extension enablement
+
+---
+
+#### **api/db.php (Helper Wrapper)**
+```php
+/**
+ * Database Connection Helper for API endpoints
+ * Provides simple functions for API files
+ */
+
+require_once __DIR__ . '/../src/Config/Autoloader.php';
+use App\Config\Database;
+
+function getDbConnection(): PDO
+{
+    $db = Database::getInstance();
+    return $db->getConnection();
+}
+
+function dbQuery(string $query, array $params = []): array
+{
+    $db = Database::getInstance();
+    return $db->fetchAll($query, $params);
+}
+
+function dbInsert(string $query, array $params = []): int
+{
+    $db = Database::getInstance();
+    return $db->insert($query, $params);
+}
+
+function dbExecute(string $query, array $params = []): bool
+{
+    $db = Database::getInstance();
+    $db->query($query, $params);
+    return true;
+}
+```
+
+**Purpose:**
+- Provides simple helper functions for API endpoints
+- Wrapper around `src/Config/Database.php`
+- Included for compatibility with requirements structure
+- Simplifies database access in standalone API files
+
+**Usage Example:**
+```php
+// In an API endpoint
+require_once __DIR__ . '/db.php';
+
+// Get all properties
+$properties = dbQuery("SELECT * FROM properties ORDER BY created_at DESC");
+
+// Insert a note
+$noteId = dbInsert(
+    "INSERT INTO notes (property_id, note) VALUES (:property_id, :note)",
+    ['property_id' => $propertyId, 'note' => $noteText]
+);
+```
 
 ---
 
@@ -1561,6 +1621,12 @@ RewriteRule ^(src|views|sql|scripts)/ - [F,L]
 | GET | `/api/properties.php` | `api/properties.php` | All properties JSON |
 | POST | `/api/add_note.php` | `api/add_note.php` | Note creation result |
 | GET | `/api/notes.php?property_id=1` | `api/notes.php` | Property notes JSON |
+
+### API Helper Files
+
+| File | Purpose |
+|------|---------|
+| `api/db.php` | Database connection helper functions (wrapper around `src/Config/Database.php`) |
 
 ### Static Assets
 

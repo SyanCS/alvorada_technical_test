@@ -99,6 +99,7 @@ alvorada_technical_test/
 ├── env.example                 # Environment variables template
 │
 ├── api/                        # REST API endpoints
+│   ├── db.php                  # Database helper functions
 │   ├── property.php            # GET /api/property.php?id={id}
 │   ├── properties.php          # GET /api/properties.php
 │   ├── add_note.php            # POST /api/add_note.php
