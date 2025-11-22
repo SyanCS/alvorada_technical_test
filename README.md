@@ -98,12 +98,13 @@ alvorada_technical_test/
 ├── Dockerfile                  # PHP + Apache container definition
 ├── env.example                 # Environment variables template
 │
-├── public/                     # Static assets and API endpoints
-│   ├── api/                    # REST API endpoints
-│   │   ├── property.php        # GET /api/property.php?id={id}
-│   │   ├── properties.php      # GET /api/properties.php
-│   │   ├── add_note.php        # POST /api/add_note.php
-│   │   └── notes.php           # GET /api/notes.php?property_id={id}
+├── api/                        # REST API endpoints
+│   ├── property.php            # GET /api/property.php?id={id}
+│   ├── properties.php          # GET /api/properties.php
+│   ├── add_note.php            # POST /api/add_note.php
+│   └── notes.php               # GET /api/notes.php?property_id={id}
+│
+├── public/                     # Static assets
 │   ├── css/                    # Stylesheets
 │   ├── js/                     # JavaScript files
 │   └── map.html                # Interactive map view (SPA)

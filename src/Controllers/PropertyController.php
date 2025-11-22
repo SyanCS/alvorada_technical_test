@@ -197,7 +197,8 @@ class PropertyController
 
             View::render('property/show', [
                 'title' => htmlspecialchars($property->getName()) . ' - Alvorada',
-                'property' => $property->toArray()
+                'property' => $property->toArray(),
+                'maxWidth' => '900px'
             ]);
 
         } catch (NotFoundException $e) {

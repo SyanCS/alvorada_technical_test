@@ -56,13 +56,14 @@ alvorada_technical_test/
 │
 ├── index.php                        # Root entry point - handles form and property routes
 │
-├── public/                          # Static assets and API endpoints
+├── api/                             # API endpoints (JSON responses)
+│   ├── property.php                 # GET single property
+│   ├── properties.php               # GET all properties
+│   ├── add_note.php                 # POST add note
+│   └── notes.php                    # GET notes for property
+│
+├── public/                          # Static assets
 │   ├── map.html                     # Interactive map interface (SPA)
-│   ├── api/                         # API endpoints (JSON responses)
-│   │   ├── property.php             # GET single property
-│   │   ├── properties.php           # GET all properties
-│   │   ├── add_note.php             # POST add note
-│   │   └── notes.php                # GET notes for property
 │   ├── css/                         # Stylesheets
 │   └── js/                          # JavaScript files
 │
@@ -1498,12 +1499,13 @@ document.getElementById('addNoteForm').addEventListener('submit', async (e) => {
 - **Example**: PropertyRepositoryInterface, DatabaseInterface
 
 ### 12. **Separation of API and Web Routes**
-- **Decision**: Separate files for API endpoints (public/api/)
+- **Decision**: Separate files for API endpoints in root-level `/api/` directory
 - **Rationale**: 
   - Different response formats (JSON vs HTML)
   - Different error handling
   - Can add API-specific middleware
-- **Example**: property.php returns JSON, index.php returns HTML
+  - Requirements specify API at root level, not in public/
+- **Example**: `/api/property.php` returns JSON, `/index.php` returns HTML
 
 ### 13. **MVC for Property Details vs Static SPA for Map**
 - **Decision**: 
@@ -1555,10 +1557,10 @@ RewriteRule ^(src|views|sql|scripts)/ - [F,L]
 
 | Method | URL | File | Response |
 |--------|-----|------|----------|
-| GET | `/api/property.php?id=1` | `public/api/property.php` | Single property JSON |
-| GET | `/api/properties.php` | `public/api/properties.php` | All properties JSON |
-| POST | `/api/add_note.php` | `public/api/add_note.php` | Note creation result |
-| GET | `/api/notes.php?property_id=1` | `public/api/notes.php` | Property notes JSON |
+| GET | `/api/property.php?id=1` | `api/property.php` | Single property JSON |
+| GET | `/api/properties.php` | `api/properties.php` | All properties JSON |
+| POST | `/api/add_note.php` | `api/add_note.php` | Note creation result |
+| GET | `/api/notes.php?property_id=1` | `api/notes.php` | Property notes JSON |
 
 ### Static Assets
 
@@ -1607,23 +1609,33 @@ RewriteEngine On
 # Protect sensitive directories
 RewriteRule ^(src|views|sql|scripts)/ - [F,L]
 
-# API routes - route to public/api/ directory
-RewriteRule ^api/(.*)$ public/api/$1 [QSA,L]
-
 # Static assets from public directory
 RewriteRule ^(css|js)/(.*)$ public/$1/$2 [L]
 
 # Map HTML page from public directory
 RewriteRule ^(map\.html)$ public/$1 [L]
 
-# Default to index.php if file doesn't exist
+# Route all non-file/non-directory requests to index.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^$ index.php [L]
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
 
 # Prevent directory listing
 Options -Indexes
 ```
+
+**How it works:**
+- Static files (CSS, JS, map.html) are served directly from `public/`
+- API files in `/api/` are accessed directly (PHP files exist)
+- All other requests (like `/property?id=X`) are routed to `index.php`
+- `index.php` handles routing logic for web pages
 
 ### User Flow Examples
 

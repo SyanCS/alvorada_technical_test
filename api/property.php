@@ -6,7 +6,7 @@
  */
 
 // Load autoloader
-require_once __DIR__ . '/../../src/Config/Autoloader.php';
+require_once __DIR__ . '/../src/Config/Autoloader.php';
 
 use App\Config\Container;
 use App\Controllers\PropertyController;

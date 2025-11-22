@@ -1,15 +1,15 @@
 <?php
 /**
- * Properties List API Endpoint
- * GET /api/properties.php
- * Returns all properties as JSON
+ * Notes API Endpoint
+ * GET /api/notes.php?property_id={id}
+ * Returns all notes for a property
  */
 
 // Load autoloader
-require_once __DIR__ . '/../../src/Config/Autoloader.php';
+require_once __DIR__ . '/../src/Config/Autoloader.php';
 
 use App\Config\Container;
-use App\Contracts\PropertyRepositoryInterface;
+use App\Controllers\NoteController;
 use App\Core\View;
 
 // Set JSON header
@@ -36,23 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 try {
-    // Get repository from container
+    // Get controller from container
     $container = Container::getInstance();
-    $propertyRepository = $container->get(PropertyRepositoryInterface::class);
+    $controller = $container->get(NoteController::class);
     
-    // Get all properties
-    $properties = $propertyRepository->findAll();
-    
-    // Convert to array format
-    $propertiesArray = array_map(function($property) {
-        return $property->toArray();
-    }, $properties);
-    
-    View::json([
-        'success' => true,
-        'properties' => $propertiesArray,
-        'count' => count($propertiesArray)
-    ]);
+    // Get notes (controller handles response)
+    $controller->getNotesByProperty();
 
 } catch (Exception $e) {
     error_log("API Error: " . $e->getMessage());
