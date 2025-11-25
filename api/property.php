@@ -35,38 +35,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
-// Get ID parameter
-$id = $_GET['id'] ?? null;
-
-if (!$id || !is_numeric($id)) {
-    View::json([
-        'success' => false,
-        'message' => 'Invalid or missing id parameter'
-    ], 400);
-    exit;
-}
-
 try {
     // Get controller from container
     $container = Container::getInstance();
     $controller = $container->get(PropertyController::class);
     
-    // Get property data
-    $result = $controller->show((int) $id);
-    
-    // Return appropriate response
-    if ($result['success']) {
-        View::json([
-            'success' => true,
-            'property' => $result['property']
-        ]);
-    } else {
-        $statusCode = $result['error'] === 'NOT_FOUND' ? 404 : 500;
-        View::json([
-            'success' => false,
-            'message' => $result['message']
-        ], $statusCode);
-    }
+    // Controller handles validation and response rendering
+    $controller->showJson();
 
 } catch (Exception $e) {
     error_log("API Error: " . $e->getMessage());

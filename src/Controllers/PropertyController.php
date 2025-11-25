@@ -219,23 +219,40 @@ class PropertyController
 
     /**
      * Get property by ID and render as JSON
-     * For API endpoints
+     * For API endpoints - handles validation and response
      */
-    public function showJson(int $id): void
+    public function showJson(): void
     {
-        $result = $this->show($id);
-        
-        if ($result['success']) {
-            View::json([
-                'success' => true,
-                'property' => $result['property']
-            ]);
-        } else {
-            $statusCode = $result['error'] === 'NOT_FOUND' ? 404 : 500;
+        // Get and validate ID parameter
+        $id = $_GET['id'] ?? null;
+
+        if (!$id || !is_numeric($id)) {
             View::json([
                 'success' => false,
-                'message' => $result['message']
-            ], $statusCode);
+                'message' => 'Invalid or missing id parameter'
+            ], 400);
+            return;
+        }
+
+        try {
+            $property = $this->propertyService->getProperty((int)$id);
+
+            View::json([
+                'success' => true,
+                'property' => $property->toArray()
+            ]);
+
+        } catch (NotFoundException $e) {
+            View::json([
+                'success' => false,
+                'message' => 'Property not found'
+            ], 404);
+        } catch (Exception $e) {
+            error_log("PropertyController::showJson Error: " . $e->getMessage());
+            View::json([
+                'success' => false,
+                'message' => 'Failed to retrieve property'
+            ], 500);
         }
     }
 

@@ -1,0 +1,209 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    ALVORADA API ARCHITECTURE - CORRECTED                   ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              CLIENT LAYER                                   │
+│  (Browser, Mobile App, API Consumer)                                        │
+└────────────────────────────────┬────────────────────────────────────────────┘
+                                 │
+                    HTTP Request │ (GET, POST, etc.)
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          API ENDPOINT LAYER                                 │
+│  (Thin Entry Points - No Business Logic)                                   │
+│                                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐            │
+│  │ properties.php  │  │  property.php   │  │   notes.php     │            │
+│  │                 │  │                 │  │                 │            │
+│  │ - Set headers   │  │ - Set headers   │  │ - Set headers   │            │
+│  │ - Handle CORS   │  │ - Handle CORS   │  │ - Handle CORS   │            │
+│  │ - Get container │  │ - Get container │  │ - Get container │            │
+│  │ - Call controller│ │ - Call controller│ │ - Call controller│           │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘            │
+└───────────┼────────────────────┼────────────────────┼─────────────────────┘
+            │                    │                    │
+            │ indexJson()        │ showJson()         │ getNotesByPropertyJson()
+            ▼                    ▼                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          CONTROLLER LAYER                                   │
+│  (Request Validation, Orchestration, Response Rendering)                   │
+│                                                                             │
+│  ┌──────────────────────────────┐    ┌──────────────────────────────┐     │
+│  │   PropertyController         │    │     NoteController           │     │
+│  │                              │    │                              │     │
+│  │  - indexJson()               │    │  - addNoteJson()             │     │
+│  │  - showJson()                │    │  - getNotesByPropertyJson()  │     │
+│  │  - createJson()              │    │                              │     │
+│  │                              │    │                              │     │
+│  │  Responsibilities:           │    │  Responsibilities:           │     │
+│  │  ✓ Validate $_GET/$_POST     │    │  ✓ Parse JSON input          │     │
+│  │  ✓ Call Service methods      │    │  ✓ Call Service methods      │     │
+│  │  ✓ Handle exceptions         │    │  ✓ Handle exceptions         │     │
+│  │  ✓ Call View::json()         │    │  ✓ Call View::json()         │     │
+│  └──────────────┬───────────────┘    └──────────────┬───────────────┘     │
+└─────────────────┼──────────────────────────────────┼─────────────────────┘
+                  │                                   │
+                  │                                   │
+                  ▼                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            SERVICE LAYER                                    │
+│  (Business Logic, Orchestration, Validation)                               │
+│                                                                             │
+│  ┌──────────────────────────────┐    ┌──────────────────────────────┐     │
+│  │   PropertyService            │    │     NoteService              │     │
+│  │                              │    │                              │     │
+│  │  - createProperty()          │    │  - addNote()                 │     │
+│  │  - getProperty()             │    │  - getNotesByProperty()      │     │
+│  │  - listProperties()          │    │                              │     │
+│  │  - searchProperties()        │    │  Uses:                       │     │
+│  │                              │    │  - NoteValidator             │     │
+│  │  Uses:                       │    │  - NoteRepository            │     │
+│  │  - PropertyValidator         │    │  - PropertyRepository        │     │
+│  │  - GeolocationService        │    │                              │     │
+│  │  - PropertyRepository        │    │                              │     │
+│  └──────────────┬───────────────┘    └──────────────┬───────────────┘     │
+└─────────────────┼──────────────────────────────────┼─────────────────────┘
+                  │                                   │
+                  │                                   │
+                  ▼                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         REPOSITORY LAYER                                    │
+│  (Data Access Abstraction)                                                 │
+│                                                                             │
+│  ┌──────────────────────────────┐    ┌──────────────────────────────┐     │
+│  │   PropertyRepository         │    │     NoteRepository           │     │
+│  │                              │    │                              │     │
+│  │  - findAll()                 │    │  - save()                    │     │
+│  │  - findById()                │    │  - findByPropertyId()        │     │
+│  │  - save()                    │    │  - findById()                │     │
+│  │  - search()                  │    │                              │     │
+│  │  - findNearby()              │    │  Uses:                       │     │
+│  │                              │    │  - PDO prepared statements   │     │
+│  │  Uses:                       │    │  - SQL queries               │     │
+│  │  - PDO prepared statements   │    │                              │     │
+│  │  - PostGIS functions         │    │                              │     │
+│  └──────────────┬───────────────┘    └──────────────┬───────────────┘     │
+└─────────────────┼──────────────────────────────────┼─────────────────────┘
+                  │                                   │
+                  └───────────────┬───────────────────┘
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            DATABASE LAYER                                   │
+│  (PostgreSQL 15 + PostGIS 3.3)                                             │
+│                                                                             │
+│  ┌──────────────────┐              ┌──────────────────┐                   │
+│  │  properties      │              │     notes        │                   │
+│  │  ──────────────  │              │  ──────────────  │                   │
+│  │  id              │◄─────────────┤  id              │                   │
+│  │  name            │           FK │  property_id     │                   │
+│  │  address         │              │  note            │                   │
+│  │  location (geo)  │              │  created_at      │                   │
+│  │  latitude        │              │  updated_at      │                   │
+│  │  longitude       │              └──────────────────┘                   │
+│  │  extra_field     │                                                      │
+│  │  created_at      │                                                      │
+│  │  updated_at      │                                                      │
+│  └──────────────────┘                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                          KEY ARCHITECTURAL PRINCIPLES
+═══════════════════════════════════════════════════════════════════════════════
+
+✓ SEPARATION OF CONCERNS
+  Each layer has a single, well-defined responsibility
+
+✓ DEPENDENCY INJECTION
+  All dependencies injected via Container (no tight coupling)
+
+✓ REPOSITORY PATTERN
+  Data access abstracted from business logic
+
+✓ SERVICE LAYER
+  Business logic isolated from HTTP concerns
+
+✓ THIN CONTROLLERS
+  Controllers orchestrate, don't implement business logic
+
+✓ SOLID PRINCIPLES
+  S - Single Responsibility (each class has one job)
+  O - Open/Closed (extensible via interfaces)
+  L - Liskov Substitution (proper interface implementation)
+  I - Interface Segregation (focused contracts)
+  D - Dependency Inversion (depend on abstractions)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              REQUEST FLOW EXAMPLE
+═══════════════════════════════════════════════════════════════════════════════
+
+GET /api/property.php?id=1
+
+1. API Endpoint (property.php)
+   ├─ Sets headers (Content-Type, CORS)
+   ├─ Handles OPTIONS preflight
+   ├─ Checks HTTP method
+   ├─ Gets PropertyController from Container
+   └─ Calls: $controller->showJson()
+
+2. Controller (PropertyController::showJson)
+   ├─ Validates: $_GET['id'] exists and is numeric
+   ├─ Calls: $propertyService->getProperty(1)
+   ├─ Catches: NotFoundException, Exception
+   └─ Renders: View::json(['success' => true, 'property' => ...])
+
+3. Service (PropertyService::getProperty)
+   ├─ Calls: $propertyRepository->findById(1)
+   ├─ Checks: Property exists (throws NotFoundException if not)
+   └─ Returns: Property model
+
+4. Repository (PropertyRepository::findById)
+   ├─ Prepares: SELECT * FROM properties WHERE id = :id
+   ├─ Executes: PDO prepared statement
+   ├─ Fetches: Database row
+   └─ Returns: Property model (or null)
+
+5. Database (PostgreSQL)
+   ├─ Executes query
+   └─ Returns row data
+
+6. Response flows back up:
+   Database → Repository → Service → Controller → View → Client
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                            DEPENDENCY INJECTION FLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+Container::getInstance()
+    │
+    ├─ PropertyController requested
+    │   │
+    │   ├─ Needs: PropertyService
+    │   │   │
+    │   │   ├─ Needs: PropertyRepository
+    │   │   │   │
+    │   │   │   ├─ Needs: Database
+    │   │   │   │   └─ Creates: PDO connection
+    │   │   │   └─ Creates: PropertyRepository(Database)
+    │   │   │
+    │   │   ├─ Needs: PropertyValidator
+    │   │   │   └─ Creates: PropertyValidator()
+    │   │   │
+    │   │   ├─ Needs: GeolocationService
+    │   │   │   └─ Creates: GeolocationService()
+    │   │   │
+    │   │   └─ Creates: PropertyService(
+    │   │                  PropertyRepository,
+    │   │                  PropertyValidator,
+    │   │                  GeolocationService
+    │   │              )
+    │   │
+    │   └─ Creates: PropertyController(PropertyService)
+    │
+    └─ Returns: Fully configured PropertyController
+
+
+═══════════════════════════════════════════════════════════════════════════════

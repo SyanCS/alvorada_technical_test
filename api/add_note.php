@@ -40,8 +40,8 @@ try {
     $container = Container::getInstance();
     $controller = $container->get(NoteController::class);
     
-    // Add note (controller handles response)
-    $controller->addNote();
+    // Controller handles validation and response rendering
+    $controller->addNoteJson();
 
 } catch (Exception $e) {
     error_log("API Error: " . $e->getMessage());

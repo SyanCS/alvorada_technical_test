@@ -22,10 +22,11 @@ class NoteController
     }
 
     /**
-     * Add a note to a property
+     * Add a note to a property (JSON API)
      * POST /api/add_note.php
+     * Handles input parsing, validation, and response rendering
      */
-    public function addNote(): void
+    public function addNoteJson(): void
     {
         // Get JSON input
         $input = file_get_contents('php://input');
@@ -59,7 +60,7 @@ class NoteController
                 'message' => $e->getMessage()
             ], 404);
         } catch (Exception $e) {
-            error_log("NoteController::addNote Error: " . $e->getMessage());
+            error_log("NoteController::addNoteJson Error: " . $e->getMessage());
             View::json([
                 'success' => false,
                 'message' => 'Failed to add note',
@@ -69,10 +70,11 @@ class NoteController
     }
 
     /**
-     * Get all notes for a property
+     * Get all notes for a property (JSON API)
      * GET /api/notes.php?property_id={id}
+     * Handles parameter validation and response rendering
      */
-    public function getNotesByProperty(): void
+    public function getNotesByPropertyJson(): void
     {
         $propertyId = $_GET['property_id'] ?? null;
 
@@ -95,7 +97,7 @@ class NoteController
             ]);
 
         } catch (Exception $e) {
-            error_log("NoteController::getNotesByProperty Error: " . $e->getMessage());
+            error_log("NoteController::getNotesByPropertyJson Error: " . $e->getMessage());
             View::json([
                 'success' => false,
                 'message' => 'Failed to retrieve notes',
