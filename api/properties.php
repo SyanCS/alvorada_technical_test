@@ -9,7 +9,7 @@
 require_once __DIR__ . '/../src/Config/Autoloader.php';
 
 use App\Config\Container;
-use App\Contracts\PropertyRepositoryInterface;
+use App\Controllers\PropertyController;
 use App\Core\View;
 
 // Set JSON header
@@ -36,23 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 try {
-    // Get repository from container
+    // Get controller from container
     $container = Container::getInstance();
-    $propertyRepository = $container->get(PropertyRepositoryInterface::class);
+    $controller = $container->get(PropertyController::class);
     
-    // Get all properties
-    $properties = $propertyRepository->findAll();
-    
-    // Convert to array format
-    $propertiesArray = array_map(function($property) {
-        return $property->toArray();
-    }, $properties);
-    
-    View::json([
-        'success' => true,
-        'properties' => $propertiesArray,
-        'count' => count($propertiesArray)
-    ]);
+    // Get all properties (controller handles response)
+    $controller->indexJson();
 
 } catch (Exception $e) {
     error_log("API Error: " . $e->getMessage());

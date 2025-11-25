@@ -268,6 +268,30 @@ class PropertyController
     }
 
     /**
+     * List all properties as JSON (for API)
+     * GET /api/properties.php
+     */
+    public function indexJson(): void
+    {
+        try {
+            $result = $this->propertyService->listProperties();
+
+            View::json([
+                'success' => true,
+                'properties' => array_map(fn($p) => $p->toArray(), $result['properties']),
+                'count' => count($result['properties'])
+            ]);
+
+        } catch (Exception $e) {
+            error_log("PropertyController::indexJson Error: " . $e->getMessage());
+            View::json([
+                'success' => false,
+                'message' => 'Failed to retrieve properties'
+            ], 500);
+        }
+    }
+
+    /**
      * Search properties by address
      * 
      * @param string $query
