@@ -26,6 +26,8 @@ The property scoring system intelligently matches properties to client requireme
 └─────────────────────────────────────────────────────────────────┘
 
 1. Broker inputs client requirements (free text)
+   - Via Web UI at http://localhost:8080/score.html
+   - Or via API call to /api/score_properties.php
    ↓
 2. System retrieves all properties from database
    ↓
@@ -39,6 +41,8 @@ The property scoring system intelligently matches properties to client requireme
 4. Sort properties by score (highest first)
    ↓
 5. Return ranked list with explanations
+   - Displayed in beautiful UI with color-coded scores
+   - Or returned as JSON for API consumers
 ```
 
 ---
@@ -89,6 +93,22 @@ The property scoring system intelligently matches properties to client requireme
 ## Step-by-Step Process
 
 ### Step 1: Client Request
+
+Brokers can input requirements in two ways:
+
+#### Option A: Web UI (Recommended for Brokers)
+
+**Access:** Navigate to `http://localhost:8080/score.html`
+
+**Features:**
+- User-friendly text area for entering requirements
+- Pre-filled example requirements (click to use)
+- Limit results option
+- Beautiful visual display of scored properties
+- Color-coded scores (green for excellent, red for poor)
+- Interactive cards showing strengths and weaknesses
+
+#### Option B: API Call (For Developers/Integrations)
 
 **Input Example:**
 ```bash
@@ -726,6 +746,27 @@ $properties = $this->propertyRepository
 ---
 
 ## Testing Examples
+
+### Test with Web UI (Easiest)
+
+1. **Open the scoring page:**
+   ```
+   http://localhost:8080/score.html
+   ```
+
+2. **Enter client requirements** or click one of the example chips:
+   - "Office space, 20-30 people, near subway"
+   - "Retail storefront, ground floor, high foot traffic"
+   - "Warehouse, 10,000+ sqft, loading dock, highway access"
+
+3. **Click "Score Properties"** button
+
+4. **View beautiful results:**
+   - Ranked list of properties with scores
+   - Detailed explanations for each score
+   - Color-coded cards (green = excellent match, red = poor match)
+   - Strengths and weaknesses breakdown
+   - AI confidence indicators
 
 ### Test with cURL
 

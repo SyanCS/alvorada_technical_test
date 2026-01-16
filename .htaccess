@@ -6,8 +6,8 @@ RewriteRule ^(src|views|sql|scripts)/ - [F,L]
 # Static assets from public directory
 RewriteRule ^(css|js)/(.*)$ public/$1/$2 [L]
 
-# Map HTML page from public directory
-RewriteRule ^(map\.html)$ public/$1 [L]
+# Static HTML pages from public directory
+RewriteRule ^(map\.html|score\.html)$ public/$1 [L]
 
 # Route all non-file/non-directory requests to index.php
 RewriteCond %{REQUEST_FILENAME} !-f

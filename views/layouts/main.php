@@ -80,6 +80,7 @@
         <div class="header-nav">
             <div class="header-nav-content">
                 <a href="/">🏠 Add Property</a>
+                <a href="/score.html">🎯 Score Properties</a>
                 <a href="/map.html">🗺️ View Map</a>
             </div>
         </div>

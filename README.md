@@ -130,6 +130,7 @@ php scripts/seed_properties.php --help
 Open your web browser and navigate to:
 
 - **Main Application:** http://localhost:8080/
+- **Property Scoring:** http://localhost:8080/score.html
 - **Interactive Map:** http://localhost:8080/map.html
 
 ---
@@ -222,6 +223,34 @@ This video demonstrates:
    - All notes are displayed chronologically
    - Each note shows timestamp
 
+### 🎯 Scoring Properties Against Client Requirements
+
+1. **Navigate to:** http://localhost:8080/score.html
+
+2. **Enter client requirements:**
+   - Type free-text description of what your client is looking for
+   - Example: "Office space for 20-30 people near subway, parking needed, modern condition, $40-50k/month budget"
+   - Or click one of the quick example chips to auto-fill
+
+3. **Click "🎯 Score Properties"**
+
+4. **View ranked results:**
+   - Properties scored from 0 to 10
+   - Color-coded cards (green = excellent match, red = poor match)
+   - Detailed explanation for each score
+   - Strengths and weaknesses breakdown
+   - AI confidence indicators
+
+5. **Filter results:**
+   - Use the "Limit Results" field to show only top N matches
+   - Default shows top 10 properties
+
+**Example Requirements:**
+- "Client is looking for an office near the subway, budget up to $50k/month, for 15–20 people, preferably in a central area"
+- "Retail storefront, ground floor, high foot traffic, 1500-2000 sqft, large display windows"
+- "Warehouse with loading dock, 10,000+ sqft, 20ft ceiling, near highway access"
+
+**Note:** For best results, first extract features from property notes using the API or test script.
 
 #### Sample SQL Queries
 
