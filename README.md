@@ -32,6 +32,12 @@ A full-stack property research and management platform built with vanilla PHP, P
 - **🔍 Property Search** - Real-time search and filtering on the map
 - **📊 REST API** - Complete RESTful API for programmatic access
 
+### 🤖 AI-Powered Features (NEW!)
+- **🧠 Feature Extraction** - Automatically extract structured data from unstructured property notes
+- **📊 Property Scoring** - Score and rank properties (0-10) based on client requirements
+- **🎯 Smart Matching** - AI-powered property-to-requirement matching with explanations
+- **💡 Intelligent Insights** - Extract amenities, capacity, condition ratings, and more from text
+
 ### Technical Highlights
 - **✅ Clean Architecture** - MVC pattern with Service Layer
 - **✅ Dependency Injection** - Custom DI Container for loose coupling
@@ -125,6 +131,28 @@ Open your web browser and navigate to:
 
 - **Main Application:** http://localhost:8080/
 - **Interactive Map:** http://localhost:8080/map.html
+
+---
+
+### 🤖 Setup AI Features (Optional)
+
+To enable AI-powered feature extraction and property scoring:
+
+```bash
+# 1. Run the database migration
+docker exec -i alvorada_db psql -U alvorada_user -d alvorada_db < sql/migrations/001_add_property_features.sql
+
+# 2. Get OpenAI API key from https://platform.openai.com/api-keys
+
+# 3. Add to .env file
+echo "OPENAI_API_KEY=sk-your-key-here" >> .env
+
+# 4. Test AI features
+php scripts/test_ai_features.php
+```
+
+**See [docs/AI_USAGE.md](docs/AI_USAGE.md) for complete AI features documentation.**
+
 ---
 
 
@@ -297,7 +325,8 @@ Controllers → Services → Repositories → Database
 ## 📚 Additional Resources
 
 - **[REQUIREMENTS.md](REQUIREMENTS.md)** - Original project requirements
-- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Complete API reference
+- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Complete API reference including AI endpoints
+- **[docs/AI_USAGE.md](docs/AI_USAGE.md)** - AI features usage guide and examples
 - **[AI_PROPOSAL.md](AI_PROPOSAL.md)** - AI/LLM enhancement strategy
 
 ### Useful Links

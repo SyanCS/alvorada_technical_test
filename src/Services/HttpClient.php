@@ -152,20 +152,25 @@ class HttpClient
             throw new Exception("cURL Error ({$curlErrno}): {$curlError}");
         }
 
-        // Check HTTP response code
-        if ($httpCode < 200 || $httpCode >= 300) {
-            throw new Exception("HTTP Error: API returned status code {$httpCode}");
-        }
-
         // Decode JSON response
         $data = json_decode($response, true);
 
         // Return raw response if not JSON
         if (json_last_error() !== JSON_ERROR_NONE) {
+            // Check HTTP response code for non-JSON responses
+            if ($httpCode < 200 || $httpCode >= 300) {
+                throw new Exception("HTTP Error: API returned status code {$httpCode}. Response: {$response}");
+            }
             return [
                 'raw' => $response,
                 'http_code' => $httpCode
             ];
+        }
+
+        // For JSON responses, include error in data if status code indicates error
+        if ($httpCode < 200 || $httpCode >= 300) {
+            // Return the error response as data so the caller can handle it
+            return array_merge($data, ['http_code' => $httpCode]);
         }
 
         return $data;

@@ -5,13 +5,19 @@ namespace App\Config;
 use App\Contracts\DatabaseInterface;
 use App\Contracts\NoteRepositoryInterface;
 use App\Contracts\PropertyRepositoryInterface;
+use App\Contracts\PropertyFeatureRepositoryInterface;
+use App\Controllers\AIController;
 use App\Controllers\NoteController;
 use App\Controllers\PropertyController;
 use App\Repositories\NoteRepository;
 use App\Repositories\PropertyRepository;
+use App\Repositories\PropertyFeatureRepository;
+use App\Services\FeatureExtractionService;
+use App\Services\GeminiService;
 use App\Services\GeolocationService;
 use App\Services\HttpClient;
 use App\Services\NoteService;
+use App\Services\PropertyScoringService;
 use App\Services\PropertyService;
 use App\Validators\PropertyValidator;
 
@@ -85,6 +91,41 @@ class Container
             return new HttpClient();
         });
 
+        // ==================== AI Services ====================
+        
+        // Register GeminiService (singleton for efficiency)
+        $this->singleton(GeminiService::class, function () {
+            return new GeminiService($this->get(HttpClient::class));
+        });
+
+        // Register PropertyFeatureRepository
+        $this->bind(PropertyFeatureRepositoryInterface::class, function () {
+            return new PropertyFeatureRepository(
+                $this->get(DatabaseInterface::class)
+            );
+        });
+
+        // Register FeatureExtractionService
+        $this->bind(FeatureExtractionService::class, function () {
+            return new FeatureExtractionService(
+                $this->get(GeminiService::class),
+                $this->get(PropertyRepositoryInterface::class),
+                $this->get(NoteRepositoryInterface::class),
+                $this->get(PropertyFeatureRepositoryInterface::class)
+            );
+        });
+
+        // Register PropertyScoringService
+        $this->bind(PropertyScoringService::class, function () {
+            return new PropertyScoringService(
+                $this->get(GeminiService::class),
+                $this->get(PropertyRepositoryInterface::class),
+                $this->get(PropertyFeatureRepositoryInterface::class)
+            );
+        });
+
+        // ==================== Business Logic Services ====================
+
         // Register PropertyService (business logic layer)
         $this->bind(PropertyService::class, function () {
             return new PropertyService(
@@ -114,6 +155,14 @@ class Container
         $this->bind(NoteController::class, function () {
             return new NoteController(
                 $this->get(NoteService::class)
+            );
+        });
+
+        // Register AIController (AI features)
+        $this->bind(AIController::class, function () {
+            return new AIController(
+                $this->get(FeatureExtractionService::class),
+                $this->get(PropertyScoringService::class)
             );
         });
     }

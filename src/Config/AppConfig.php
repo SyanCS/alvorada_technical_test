@@ -70,6 +70,17 @@ class AppConfig
                 'follow_redirects' => $this->env('HTTP_CLIENT_FOLLOW_REDIRECTS', 'true') === 'true',
                 'verify_ssl' => $this->env('HTTP_CLIENT_VERIFY_SSL', 'true') === 'true',
             ],
+
+            // Google Gemini Service
+            'gemini' => [
+                'api_base_url' => $this->env('GEMINI_API_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
+                'api_key' => $this->env('GEMINI_API_KEY', ''),
+                'model' => $this->env('GEMINI_MODEL', 'gemini-2.0-flash'),
+                'temperature' => (float) $this->env('GEMINI_TEMPERATURE', '0.3'),
+                'max_tokens' => (int) $this->env('GEMINI_MAX_TOKENS', '2048'),
+                'timeout' => (int) $this->env('GEMINI_TIMEOUT', '30'),
+                'max_retries' => (int) $this->env('GEMINI_MAX_RETRIES', '3'),
+            ],
         ];
     }
 
@@ -170,6 +181,46 @@ class AppConfig
     public function isProduction(): bool
     {
         return $this->get('app.env') === 'production';
+    }
+
+    /**
+     * Get database configuration
+     * 
+     * @return array
+     */
+    public function getDatabaseConfig(): array
+    {
+        return $this->getSection('database');
+    }
+
+    /**
+     * Get Gemini configuration
+     * 
+     * @return array
+     */
+    public function getGeminiConfig(): array
+    {
+        return $this->getSection('gemini');
+    }
+
+    /**
+     * Get geolocation configuration
+     * 
+     * @return array
+     */
+    public function getGeolocationConfig(): array
+    {
+        return $this->getSection('geolocation');
+    }
+
+    /**
+     * Get HTTP client configuration
+     * 
+     * @return array
+     */
+    public function getHttpConfig(): array
+    {
+        return $this->getSection('http');
     }
 
     /**
