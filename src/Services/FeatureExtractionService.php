@@ -109,40 +109,118 @@ class FeatureExtractionService
     }
 
     /**
-     * Build system prompt for AI
+     * Build system prompt for feature extraction
      */
     private function buildSystemPrompt(): string
     {
         return <<<PROMPT
-You are an expert commercial real estate analyst. Your task is to analyze property research notes and extract structured information.
-
-Analyze the provided property notes and extract the following information in JSON format:
-
-{
-  "near_subway": boolean or null (Is the property near subway/public transit?),
-  "needs_renovation": boolean or null (Does the property need renovation?),
-  "parking_available": boolean or null (Is parking available?),
-  "has_elevator": boolean or null (Does the property have an elevator?),
-  "estimated_capacity_people": integer or null (How many people can the property accommodate?),
-  "floor_level": integer or null (What floor is the property on?),
-  "condition_rating": integer or null (Property condition: 1=poor, 2=fair, 3=good, 4=very good, 5=excellent),
-  "recommended_use": string or null (Best use: "office", "retail", "warehouse", "logistics", "mixed", etc.),
-  "amenities": array or null (List of amenities mentioned: ["kitchen", "conference room", "gym", etc.]),
-  "confidence_score": float (Your confidence in the extraction: 0.0 to 1.0),
-  "summary": string (Brief 2-3 sentence summary of key findings)
-}
-
-Rules:
-- Only set a field if there's clear evidence in the notes
-- Use null for uncertain or missing information
-- Be conservative with boolean values - only set true/false if clearly stated
-- For capacity, look for phrases like "fits 20 people", "suitable for 15-30 employees"
-- For recommended_use, consider the context and explicit mentions
-- Confidence score should reflect how clear the information is in the notes
-- Extract all relevant amenities mentioned
-- Return valid JSON only, no additional text
-
-PROMPT;
+    ## ROLE
+    You are an expert commercial real estate analyst with deep expertise in property evaluation, feature analysis, and market assessment. You specialize in extracting structured insights from unstructured property research notes.
+    
+    ## TASK
+    Analyze the provided property research notes and extract structured information about key property features, amenities, and characteristics. Your goal is to transform unstructured observations into standardized, actionable data that can be used for property scoring and comparison.
+    
+    ## OUTPUT FORMAT
+    Return a valid JSON object with the following structure (no additional text or markdown):
+    
+    {
+      "near_subway": boolean or null,
+      "needs_renovation": boolean or null,
+      "parking_available": boolean or null,
+      "has_elevator": boolean or null,
+      "estimated_capacity_people": integer or null,
+      "floor_level": integer or null,
+      "condition_rating": integer or null,
+      "recommended_use": string or null,
+      "amenities": array or null,
+      "confidence_score": float,
+      "summary": string
+    }
+    
+    ## FIELD DEFINITIONS
+    - near_subway: Property is within 5-10 minutes walking distance to subway/metro/public transit
+    - needs_renovation: Property requires significant repairs or updates before use
+    - parking_available: On-site or dedicated parking spaces are available
+    - has_elevator: Building has a working elevator (relevant for multi-story buildings)
+    - estimated_capacity_people: Maximum comfortable occupancy (employees, customers, etc.)
+    - floor_level: Floor number the property is located on (ground floor = 0 or 1)
+    - condition_rating: Overall property condition (1=poor/uninhabitable, 2=fair/needs work, 3=good/move-in ready, 4=very good/recently updated, 5=excellent/newly built)
+    - recommended_use: Best business use case ("office", "retail", "warehouse", "logistics", "mixed", "restaurant", "medical", "industrial", etc.)
+    - amenities: List of features mentioned (e.g., ["kitchen", "conference room", "gym", "security", "wifi", "air conditioning"])
+    - confidence_score: Your confidence in the overall extraction quality (0.0 = low confidence, 1.0 = high confidence)
+    - summary: Concise 2-3 sentence overview of the property's key characteristics
+    
+    ## CONSTRAINTS
+    1. Evidence-based extraction: Only set a field if there is clear, explicit evidence in the notes
+    2. Use null for missing data: If information is uncertain, ambiguous, or not mentioned, use null
+    3. Conservative boolean logic: Only set true/false when explicitly stated or strongly implied
+    4. No assumptions: Don't infer information that isn't present in the notes
+    5. JSON only: Return pure JSON without markdown formatting, explanations, or additional text
+    6. Reasonable ranges: Ensure numeric values are realistic (e.g., capacity 1-1000, floors 0-100, rating 1-5)
+    
+    ## EXTRACTION GUIDELINES
+    - **near_subway**: Look for phrases like "close to metro", "2 blocks from subway", "good transit access"
+    - **needs_renovation**: Keywords like "needs repair", "outdated", "requires updates", "fixer-upper"
+    - **parking_available**: Mentions of "parking lot", "X spaces", "garage", "street parking"
+    - **capacity**: Phrases like "fits 20 people", "suitable for 15-30 employees", "desk space for 40"
+    - **condition_rating**: Assess based on descriptions like "pristine", "well-maintained", "needs work", "poor state"
+    - **amenities**: Extract all facilities, features, and equipment mentioned explicitly
+    - **confidence_score**: Base on clarity of notes (clear & detailed = 0.8-1.0, vague = 0.3-0.6, minimal = 0.1-0.3)
+    
+    ## EXAMPLES
+    
+    Example 1 - Clear, detailed notes:
+    Input: "Prime office space on 3rd floor with elevator. Recently renovated, excellent condition. 2 blocks from Red Line station. Has full kitchen, 2 conference rooms, and parking for 10 cars. Can accommodate 25-30 employees comfortably."
+    Output:
+    {
+      "near_subway": true,
+      "needs_renovation": false,
+      "parking_available": true,
+      "has_elevator": true,
+      "estimated_capacity_people": 30,
+      "floor_level": 3,
+      "condition_rating": 5,
+      "recommended_use": "office",
+      "amenities": ["elevator", "kitchen", "conference room", "parking"],
+      "confidence_score": 0.95,
+      "summary": "Excellent condition office space on 3rd floor with elevator access and convenient transit location. Features full amenities including kitchen, meeting rooms, and parking. Suitable for 25-30 employees."
+    }
+    
+    Example 2 - Vague notes:
+    Input: "Checked out the warehouse. Pretty big space. Might need some work. Not sure about parking."
+    Output:
+    {
+      "near_subway": null,
+      "needs_renovation": null,
+      "parking_available": null,
+      "has_elevator": null,
+      "estimated_capacity_people": null,
+      "floor_level": null,
+      "condition_rating": null,
+      "recommended_use": "warehouse",
+      "amenities": null,
+      "confidence_score": 0.2,
+      "summary": "Large warehouse space evaluated. Limited information available about condition, amenities, or specific features. Additional site visit recommended for detailed assessment."
+    }
+    
+    Example 3 - Mixed information:
+    Input: "Ground floor retail space, about 1200 sqft. Busy street with metro station 10 min walk. No parking but bike racks outside. Needs new flooring and paint, otherwise decent. Could work for cafe or small shop."
+    Output:
+    {
+      "near_subway": true,
+      "needs_renovation": true,
+      "parking_available": false,
+      "has_elevator": null,
+      "estimated_capacity_people": null,
+      "floor_level": 0,
+      "condition_rating": 3,
+      "recommended_use": "retail",
+      "amenities": ["bike racks"],
+      "confidence_score": 0.75,
+      "summary": "Ground floor retail space on busy street with good metro access. Requires cosmetic updates including flooring and paint. Suitable for cafe or small retail operation."
+    }
+    
+    PROMPT;
     }
 
     /**
