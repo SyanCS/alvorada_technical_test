@@ -4,6 +4,23 @@
 
 The property scoring system intelligently matches properties to client requirements by assigning a score from 0 to 10. This document explains the complete flow from input to output with practical examples.
 
+### 🚀 Enhanced Feature-Based Scoring (NEW)
+
+The system now uses an **enhanced structured features approach** for more accurate, transparent scoring:
+
+✅ **Weighted Feature Analysis** - Features categorized by importance (High/Medium/Lower)  
+✅ **Specific Matching Logic** - Direct feature-to-requirement matching with point values  
+✅ **Feature Completeness Score** - Know how much data is available (0.0-1.0)  
+✅ **Adaptive Confidence** - Confidence adjusted based on feature availability  
+✅ **Enhanced Transparency** - Explanations cite specific features with ✓/✗ indicators  
+✅ **Structured Feature Summary** - API responses include key feature data  
+
+**Key Benefits:**
+- More accurate scores when features are extracted
+- Consistent scoring across similar properties
+- Detailed explanations with concrete feature references
+- Better data for broker decision-making
+
 ---
 
 ## Table of Contents
@@ -188,63 +205,92 @@ PropertyFeature {
 }
 ```
 
-#### 3b. Build AI Prompt
+#### 3b. Build AI Prompt (Enhanced with Structured Features)
 
 **System Prompt (Instructions):**
 ```
-You are an expert commercial real estate broker assistant. Your task is to score 
-how well a property matches a client's requirements.
+You are an expert commercial real estate broker assistant with deep knowledge of 
+property evaluation and client-property matching. Your task is to score how well 
+a property matches a client's requirements using both basic property information 
+and AI-extracted structured features.
 
-Analyze the property information and client requirements, then provide a score 
-from 0 to 10 where:
+SCORING SCALE:
 - 0-3: Poor match (major misalignment)
 - 4-5: Fair match (some alignment, significant gaps)
 - 6-7: Good match (solid alignment, minor gaps)
 - 8-9: Excellent match (strong alignment)
 - 10: Perfect match (meets all requirements)
 
-Return your analysis in JSON format:
-{
-  "score": float (0.0 to 10.0),
-  "explanation": string (2-3 sentences explaining the score),
-  "strengths": array of strings (what matches well),
-  "weaknesses": array of strings (what doesn't match or is missing),
-  "confidence": float (0.0 to 1.0, your confidence in this assessment)
-}
+FEATURE IMPORTANCE WEIGHTS:
+HIGH IMPORTANCE (30-40% of score):
+- Location & Transit Access (near_subway, address, city)
+- Property Type & Use Case (recommended_use)
+- Capacity/Size (estimated_capacity_people)
 
-Consider:
-- Location requirements (near subway, specific area, etc.)
-- Capacity requirements (number of people)
-- Property type requirements (office, retail, warehouse)
-- Budget constraints
-- Amenities and features needed
-- Condition and renovation requirements
+MEDIUM IMPORTANCE (20-30% of score):
+- Condition & Readiness (condition_rating, needs_renovation)
+- Core Amenities (parking_available, has_elevator, amenities)
+
+LOWER IMPORTANCE (10-20% of score):
+- Nice-to-have features (floor_level, additional amenities)
+
+FEATURE MATCHING LOGIC:
+- near_subway=true + "near transit" requirement = +1.5 to +2.5 points
+- capacity matches exactly = +1.5 to +2.0 points
+- capacity exceeds by 20-50% = +2.0 to +2.5 points
+- recommended_use matches need = +2.0 to +3.0 points
+- condition_rating 4-5 + "move-in ready" = +1.0 to +1.5 points
+- Wrong property type = max score 3.0
+- Capacity too small by >50% = max score 4.0
+
+Return your analysis in JSON format with specific feature references.
 ```
 
-**User Prompt (Property + Requirements):**
+**User Prompt (Property + Requirements) - Enhanced Structured Format:**
 ```
-Property Information:
-Property Name: Downtown Office Tower
-Address: 123 Main St, New York, NY
-City: New York
-State: NY
+========================================
+PROPERTY DETAILS
+========================================
+PROPERTY NAME: Downtown Office Tower
+ADDRESS: 123 Main St, New York, NY
+CITY: New York
+STATE: NY
 
-Extracted Features:
-- Near Subway: Yes
-- Needs Renovation: No
-- Parking: Available
-- Elevator: Yes
-- Estimated Capacity: 25 people
-- Recommended Use: office
-- Condition Rating: 4/5
-- Amenities: conference room, kitchen, fiber internet
+========================================
+AI-EXTRACTED FEATURES (Structured Data)
+========================================
+Feature Extraction Confidence: 92%
 
-Client Requirements:
+--- HIGH IMPORTANCE FEATURES ---
+Near Subway/Transit: ✓ YES (within 5-10 min walk)
+Recommended Use: OFFICE
+Estimated Capacity: 25 people
+
+--- MEDIUM IMPORTANCE FEATURES ---
+Condition Rating: 4/5 (Very Good/Recently Updated)
+Needs Renovation: ✓ NO (ready to use)
+Parking: ✓ AVAILABLE
+Elevator: ✓ YES
+Amenities (3): Conference room, Kitchen, Fiber internet
+
+--- LOWER IMPORTANCE FEATURES ---
+Floor Level: Floor 5
+
+Extracted from 2 property note(s)
+========================================
+
+========================================
+CLIENT REQUIREMENTS
+========================================
 Client is looking for an office near the subway, budget up to $50k/month, 
 for 15–20 people, preferably in a central area.
 
-Please score this property (0-10) based on how well it matches the client's 
-requirements and provide a detailed explanation in JSON format.
+========================================
+SCORING TASK
+========================================
+Analyze the property features against the client requirements and provide a 
+scored assessment. Weight features according to importance (High/Medium/Low).
+Match specific features to specific requirements. Be specific in explanations.
 ```
 
 #### 3c. Send to Gemini AI
@@ -277,7 +323,7 @@ $result = $this->geminiService->extractStructuredData(
 }
 ```
 
-#### 3d. Parse and Format Response
+#### 3d. Parse and Format Response (Enhanced)
 
 ```php
 return [
@@ -290,7 +336,17 @@ return [
     'weaknesses' => [...],
     'confidence' => 0.87,
     'latitude' => 40.7128,
-    'longitude' => -74.0060
+    'longitude' => -74.0060,
+    'feature_completeness' => 0.89,  // NEW: How complete the feature data is
+    'features' => [                   // NEW: Key feature summary
+        'near_subway' => true,
+        'recommended_use' => 'office',
+        'capacity_people' => 25,
+        'condition_rating' => 4,
+        'parking' => true,
+        'amenities_count' => 3,
+        'extraction_confidence' => 0.92
+    ]
 ];
 ```
 
@@ -314,7 +370,7 @@ if ($limit !== null && $limit > 0) {
 
 ### Step 5: Return Response
 
-**Final API Response:**
+**Final API Response (Enhanced):**
 ```json
 {
   "success": true,
@@ -325,31 +381,62 @@ if ($limit !== null && $limit > 0) {
       "property_name": "Downtown Office Tower",
       "address": "123 Main St, New York, NY",
       "score": 8.5,
-      "explanation": "Excellent match for the client's needs. The property is located near subway access in a central area and can comfortably accommodate 15-20 people with capacity for 25. The condition is good and includes modern amenities like fiber internet. The main consideration is confirming the rental rate fits within the $50k/month budget.",
+      "explanation": "Excellent match for the client's needs. The property is located near subway access (✓ within 10 min walk) in central New York and can comfortably accommodate 15-20 people with capacity for 25. Condition rating of 4/5 means it's move-in ready with no renovation needed. Modern amenities including fiber internet. The main consideration is confirming the rental rate fits within the $50k/month budget.",
       "strengths": [
-        "Prime location near subway in central New York",
-        "Perfect capacity (25 people) exceeds requirement of 15-20",
-        "No renovation needed - move-in ready",
-        "Modern amenities including conference room and fiber internet",
-        "Good condition rating (4/5)"
+        "✓ Near subway - within 5-10 minute walk (HIGH IMPORTANCE)",
+        "✓ Office use - matches requirement perfectly (HIGH IMPORTANCE)",
+        "✓ Capacity of 25 people exceeds requirement of 15-20 by 25% (HIGH IMPORTANCE)",
+        "✓ Condition rating 4/5 - move-in ready, no renovation needed",
+        "✓ Modern amenities: conference room, kitchen, fiber internet",
+        "✓ Has elevator (5th floor location)"
       ],
       "weaknesses": [
         "Budget not explicitly confirmed - needs verification against $50k/month limit",
-        "5th floor location may be concern if elevator maintenance is an issue"
+        "Parking availability not mentioned in requirements but is available if needed"
       ],
       "confidence": 0.87,
       "latitude": 40.7128,
-      "longitude": -74.0060
+      "longitude": -74.0060,
+      "feature_completeness": 0.89,
+      "features": {
+        "near_subway": true,
+        "recommended_use": "office",
+        "capacity_people": 25,
+        "condition_rating": 4,
+        "parking": true,
+        "amenities_count": 3,
+        "extraction_confidence": 0.92
+      }
     },
     {
       "property_id": 5,
       "property_name": "Midtown Business Center",
       "address": "789 Park Ave, New York, NY",
       "score": 7.8,
-      "explanation": "Good match with strong location and capacity...",
-      "strengths": [...],
-      "weaknesses": [...],
-      "confidence": 0.82
+      "explanation": "Good match with strong location and capacity. Near subway access and suitable office space for 20 people. However, condition rating of 3/5 indicates it's functional but may need some updates soon.",
+      "strengths": [
+        "✓ Near subway access (HIGH IMPORTANCE)",
+        "✓ Office type matches requirement (HIGH IMPORTANCE)",
+        "✓ Capacity of 20 people matches requirement exactly"
+      ],
+      "weaknesses": [
+        "✗ Condition rating 3/5 - functional but not recently updated",
+        "✗ No parking available - may be a concern",
+        "Limited amenities listed (only 1)"
+      ],
+      "confidence": 0.82,
+      "latitude": 40.7580,
+      "longitude": -73.9855,
+      "feature_completeness": 0.78,
+      "features": {
+        "near_subway": true,
+        "recommended_use": "office",
+        "capacity_people": 20,
+        "condition_rating": 3,
+        "parking": false,
+        "amenities_count": 1,
+        "extraction_confidence": 0.85
+      }
     }
     // ... more properties up to the limit
   ],
@@ -358,6 +445,13 @@ if ($limit !== null && $limit > 0) {
   "client_requirements": "Client is looking for an office near the subway, budget up to $50k/month, for 15–20 people, preferably in a central area."
 }
 ```
+
+**Note the Enhanced Features:**
+- Explanations now include checkmarks (✓/✗) and specific feature references
+- Strengths cite importance levels (HIGH/MEDIUM/LOWER)
+- New `feature_completeness` field (0.0-1.0)
+- New `features` object with key feature summary
+- More specific, actionable information for brokers
 
 ---
 
@@ -567,55 +661,112 @@ The Gemini AI considers these factors when scoring:
 
 ---
 
-## Integration with Feature Extraction
+## Integration with Feature Extraction (Enhanced Approach)
 
-The scoring system is more powerful when combined with feature extraction:
+The scoring system uses a **structured, weighted feature approach** for maximum accuracy:
 
 ### Without Feature Extraction
 
 If features haven't been extracted yet:
 
 ```
-Property Information:
-Property Name: Downtown Office Tower
-Address: 123 Main St, New York, NY
-City: New York
-State: NY
+========================================
+PROPERTY DETAILS
+========================================
+PROPERTY NAME: Downtown Office Tower
+ADDRESS: 123 Main St, New York, NY
+CITY: New York
+STATE: NY
 
-Note: No AI-extracted features available for this property yet.
+========================================
+⚠️  NO EXTRACTED FEATURES AVAILABLE
+========================================
+Scoring will be based on property name and address only.
+Confidence will be lower. Run feature extraction for better results.
+========================================
 ```
 
 **Impact:**
-- AI can only score based on name and address
-- Less accurate scoring (confidence ~0.5-0.6)
-- More generic explanations
+- AI scores conservatively (typically 4-6 range)
+- Based only on name/address inference
+- Lower confidence (~0.4-0.6)
+- Generic explanations without specific feature references
+- Feature completeness score: 0.0
+- Confidence automatically capped at 0.6
 
-### With Feature Extraction
+### With Feature Extraction (Enhanced)
 
-After running feature extraction:
+After running feature extraction, features are presented in **structured tiers**:
 
 ```
-Property Information:
-Property Name: Downtown Office Tower
-Address: 123 Main St, New York, NY
-City: New York
-State: NY
+========================================
+AI-EXTRACTED FEATURES (Structured Data)
+========================================
+Feature Extraction Confidence: 92%
 
-Extracted Features:
-- Near Subway: Yes
-- Needs Renovation: No
-- Parking: Available
-- Elevator: Yes
-- Estimated Capacity: 25 people
-- Recommended Use: office
-- Condition Rating: 4/5
-- Amenities: conference room, kitchen, fiber internet
+--- HIGH IMPORTANCE FEATURES ---
+Near Subway/Transit: ✓ YES (within 5-10 min walk)
+Recommended Use: OFFICE
+Estimated Capacity: 25 people
+
+--- MEDIUM IMPORTANCE FEATURES ---
+Condition Rating: 4/5 (Very Good/Recently Updated)
+Needs Renovation: ✓ NO (ready to use)
+Parking: ✓ AVAILABLE
+Elevator: ✓ YES
+Amenities (3): Conference room, Kitchen, Fiber internet
+
+--- LOWER IMPORTANCE FEATURES ---
+Floor Level: Floor 5
+========================================
 ```
 
 **Impact:**
-- Much more accurate scoring (confidence ~0.8-0.95)
-- Specific, detailed explanations
-- Better matching of requirements to features
+- **Weighted scoring** based on feature importance tiers
+- **Specific feature matching** (e.g., "near_subway=true matches 'near transit' requirement")
+- **Higher accuracy** (confidence ~0.8-0.95)
+- **Detailed explanations** with concrete feature references
+- **Feature completeness** score (0.0-1.0) indicates data quality
+- **Extraction confidence** guides overall assessment confidence
+- Strengths/weaknesses cite specific features (e.g., "✓ Near subway (5 min walk)")
+
+### Feature Completeness Score
+
+New in enhanced scoring: properties now include a `feature_completeness` score:
+
+- **0.0-0.3**: Low data (score conservatively, confidence capped at 0.6)
+- **0.4-0.6**: Moderate data (reasonable scoring accuracy)
+- **0.7-0.9**: Good data (high accuracy)
+- **1.0**: Complete data (all 9 key features extracted)
+
+### Enhanced Scoring Benefits
+
+The new structured approach provides:
+
+1. **Weighted Feature Analysis**
+   - High-importance features (location, type, capacity) carry 30-40% of score
+   - Medium-importance (condition, amenities) carry 20-30%
+   - Lower-importance (nice-to-haves) carry 10-20%
+
+2. **Specific Feature Matching**
+   - Direct matching logic (e.g., "near_subway=true" + "near transit" requirement = +2 points)
+   - Concrete scoring rules reduce AI subjectivity
+   - More consistent scores across similar properties
+
+3. **Enhanced Transparency**
+   - Explanations cite specific features with checkmarks (✓/✗)
+   - Strengths/weaknesses reference actual extracted data
+   - Feature completeness score shows data quality
+
+4. **Adaptive Confidence**
+   - Confidence adjusted based on feature availability
+   - Low feature data = capped confidence (max 0.6)
+   - Extraction confidence factored into final confidence
+
+5. **Better Response Data**
+   - Responses include `feature_completeness` score
+   - Responses include `features` object with key feature summary
+   - More actionable data for brokers
 
 ### Recommended Workflow
 
@@ -626,9 +777,15 @@ Extracted Features:
    ↓
 3. Run feature extraction (POST /api/extract_features.php)
    ↓
-4. Run property scoring (POST /api/score_properties.php)
+4. Verify feature extraction quality (check confidence_score)
    ↓
-5. Get highly accurate, explainable scores
+5. Run property scoring (POST /api/score_properties.php)
+   ↓
+6. Get highly accurate, weighted, explainable scores
+   ↓
+7. Review feature_completeness and extraction_confidence
+   ↓
+8. Present matched properties to clients with confidence
 ```
 
 ---

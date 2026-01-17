@@ -32,11 +32,14 @@ A full-stack property research and management platform built with vanilla PHP, P
 - **🔍 Property Search** - Real-time search and filtering on the map
 - **📊 REST API** - Complete RESTful API for programmatic access
 
-### 🤖 AI-Powered Features (NEW!)
+### 🤖 AI-Powered Features (ENHANCED!)
 - **🧠 Feature Extraction** - Automatically extract structured data from unstructured property notes
-- **📊 Property Scoring** - Score and rank properties (0-10) based on client requirements
-- **🎯 Smart Matching** - AI-powered property-to-requirement matching with explanations
+- **📊 Enhanced Property Scoring** - Score and rank properties (0-10) using weighted, structured features
+- **🎯 Smart Matching** - AI-powered property-to-requirement matching with feature importance tiers
 - **💡 Intelligent Insights** - Extract amenities, capacity, condition ratings, and more from text
+- **⚖️ Weighted Analysis** - High/Medium/Lower importance feature categorization
+- **📈 Feature Completeness** - Track data quality with completeness scores (0.0-1.0)
+- **✓ Transparent Scoring** - Detailed explanations with specific feature references and checkmarks
 
 ### Technical Highlights
 - **✅ Clean Architecture** - MVC pattern with Service Layer
@@ -223,7 +226,7 @@ This video demonstrates:
    - All notes are displayed chronologically
    - Each note shows timestamp
 
-### 🎯 Scoring Properties Against Client Requirements
+### 🎯 Scoring Properties Against Client Requirements (Enhanced)
 
 1. **Navigate to:** http://localhost:8080/score.html
 
@@ -234,14 +237,23 @@ This video demonstrates:
 
 3. **Click "🎯 Score Properties"**
 
-4. **View ranked results:**
-   - Properties scored from 0 to 10
+4. **View ranked results with enhanced features:**
+   - Properties scored from 0 to 10 using **weighted feature analysis**
    - Color-coded cards (green = excellent match, red = poor match)
-   - Detailed explanation for each score
-   - Strengths and weaknesses breakdown
-   - AI confidence indicators
+   - Detailed explanations with **specific feature references** (✓/✗ indicators)
+   - Strengths cite **importance levels** (HIGH/MEDIUM/LOWER)
+   - Weaknesses show specific feature gaps
+   - **Feature completeness score** (0.0-1.0) indicates data quality
+   - AI confidence indicators adjusted by feature availability
+   - Key features summary in API responses
 
-5. **Filter results:**
+5. **Enhanced Scoring Benefits:**
+   - **Weighted Analysis:** High-importance features (location, type, capacity) weighted 30-40%
+   - **Specific Matching:** Direct feature-to-requirement matching with point values
+   - **Adaptive Confidence:** Lower confidence when feature data is incomplete
+   - **Transparent Results:** See exactly which features match or miss requirements
+
+6. **Filter results:**
    - Use the "Limit Results" field to show only top N matches
    - Default shows top 10 properties
 
@@ -250,7 +262,14 @@ This video demonstrates:
 - "Retail storefront, ground floor, high foot traffic, 1500-2000 sqft, large display windows"
 - "Warehouse with loading dock, 10,000+ sqft, 20ft ceiling, near highway access"
 
-**Note:** For best results, first extract features from property notes using the API or test script.
+**Best Practice Workflow:**
+1. Add properties to system
+2. Add detailed notes about each property
+3. Run feature extraction: `POST /api/extract_features.php`
+4. Run property scoring: `POST /api/score_properties.php`
+5. Review results with high confidence and feature completeness
+
+**Note:** Properties with extracted features receive more accurate scores (confidence ~0.8-0.95) compared to those without features (confidence capped at ~0.6). See [PROPERTY_SCORING_FLOW.md](PROPERTY_SCORING_FLOW.md) for complete details.
 
 #### Sample SQL Queries
 
@@ -355,6 +374,7 @@ Controllers → Services → Repositories → Database
 
 - **[REQUIREMENTS.md](REQUIREMENTS.md)** - Original project requirements
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Complete API reference including AI endpoints
+- **[PROPERTY_SCORING_FLOW.md](PROPERTY_SCORING_FLOW.md)** - 🚀 **Enhanced property scoring guide** with weighted features
 - **[docs/AI_USAGE.md](docs/AI_USAGE.md)** - AI features usage guide and examples
 - **[AI_PROPOSAL.md](AI_PROPOSAL.md)** - AI/LLM enhancement strategy
 
