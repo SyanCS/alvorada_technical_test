@@ -146,14 +146,21 @@ To enable AI-powered feature extraction and property scoring:
 # 1. Run the database migration
 docker exec -i alvorada_db psql -U alvorada_user -d alvorada_db < sql/migrations/001_add_property_features.sql
 
-# 2. Get OpenAI API key from https://platform.openai.com/api-keys
+# 2. Get Gemini API key from https://aistudio.google.com/app/apikey
 
 # 3. Add to .env file
-echo "OPENAI_API_KEY=sk-your-key-here" >> .env
+echo "GEMINI_API_KEY=your-key-here" >> .env
 
 # 4. Test AI features
 php scripts/test_ai_features.php
 ```
+
+**AI Features Include:**
+- 🧠 Feature extraction from notes
+- 📊 Property scoring and ranking (0-10 scale)
+- ⚖️ Weighted feature analysis (High/Medium/Lower importance)
+- 📈 Feature completeness tracking
+- 💡 Intelligent insights from unstructured text
 
 **See [docs/AI_USAGE.md](docs/AI_USAGE.md) for complete AI features documentation.**
 
@@ -168,11 +175,9 @@ Watch a complete walkthrough of the system in action:
 
 **[📹 System Usage Demo Video](https://drive.google.com/file/d/1_lMHlL4UP-EfphI6N-dRDQFrkAxP8Chl/view?usp=sharing)**
 
-This video demonstrates:
-- Adding properties with automatic geocoding
-- Viewing properties on the interactive map
-- Adding and managing research notes
-- Using the search and filtering features
+**[📹 Extract Notes Feature](https://drive.google.com/file/d/1EPWpQwuq7YUJemUB8aCndundTVd4Qhf6/view)**
+
+**[📹 Rank Properties Feature](https://drive.google.com/file/d/1gI6iKLXDDu6-LMCtrOY3ZLlhJ2EK75CY/view)**
 
 ---
 
@@ -270,6 +275,8 @@ This video demonstrates:
 5. Review results with high confidence and feature completeness
 
 **Note:** Properties with extracted features receive more accurate scores (confidence ~0.8-0.95) compared to those without features (confidence capped at ~0.6). See [PROPERTY_SCORING_FLOW.md](PROPERTY_SCORING_FLOW.md) for complete details.
+
+---
 
 #### Sample SQL Queries
 
@@ -417,6 +424,9 @@ docker compose restart
 
 # Seed sample data
 php scripts/seed_properties.php --count=10
+
+# Test AI features
+php scripts/test_ai_features.php
 
 # Access database CLI
 docker exec -it alvorada_db psql -U alvorada_user -d alvorada_db
