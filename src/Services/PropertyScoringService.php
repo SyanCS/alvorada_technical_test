@@ -111,7 +111,7 @@ class PropertyScoringService
             $result = $this->geminiService->extractStructuredData(
                 $systemPrompt,
                 $userPrompt,
-                ['temperature' => 0.4, 'max_tokens' => 800]
+                ['temperature' => 0.1, 'max_tokens' => 800]
             );
 
             return $this->parseScoreResponse($result['data'], $property, $features);

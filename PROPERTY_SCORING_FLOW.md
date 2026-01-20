@@ -35,6 +35,137 @@ The system now uses an **enhanced structured features approach** for more accura
 
 ---
 
+## Why LLM-Based Reasoning?
+
+The system uses **100% LLM-based reasoning** via Google Gemini AI for property scoring, rather than rule-based logic or text similarity algorithms.
+
+### Approach Comparison
+
+There are three main approaches to property matching:
+
+#### 1. ❌ Rule-Based Logic
+```php
+// Example of what we DON'T use
+$score = 0;
+if ($property->near_subway == true) $score += 2;
+if ($property->capacity >= $requirement->min_people) $score += 3;
+if ($property->parking == true) $score += 1.5;
+// ... fixed rules for every scenario
+```
+
+**Problems:**
+- Rigid and inflexible
+- Can't handle nuanced requirements ("modern office" vs "traditional office")
+- Requires constant code updates for new scenarios
+- No natural language understanding
+- Can't explain reasoning in human terms
+
+#### 2. ❌ Text Similarity (Cosine, TF-IDF, Jaccard)
+```python
+# Example of what we DON'T use
+similarity = cosine_similarity(requirement_text, property_description)
+score = similarity * 10
+```
+
+**Problems:**
+- No semantic understanding (just word matching)
+- Misses synonyms: "subway" ≠ "metro" (but they mean the same!)
+- Can't handle negations: "parking available" vs "no parking" (both match "parking")
+- Treats all words equally (can't distinguish critical vs nice-to-have)
+- Fails on opposite meanings: "needs renovation" vs "recently renovated"
+- No numerical reasoning: can't understand "20 people" vs "5 people capacity"
+
+**Example Failure:**
+```
+Requirement: "Office space for 20 people near subway"
+Property: "Retail storefront with subway access for 25 people"
+
+Text Similarity: 7.5/10 ⚠️ WRONG! (matches "subway", "people", "25")
+Reality: Should be 3/10 (wrong property type - retail not office!)
+```
+
+#### 3. ✅ LLM-Based Reasoning (Our Choice)
+```php
+// What we DO use
+$result = $this->geminiService->extractStructuredData(
+    $systemPrompt,    // Expert instructions
+    $userPrompt,      // Property + requirements
+    ['temperature' => 0.1, 'max_tokens' => 800]
+);
+```
+
+**Advantages:**
+- ✅ **Understands context and meaning** - Knows "office" ≠ "retail"
+- ✅ **Handles synonyms** - "subway" = "metro" = "public transit"
+- ✅ **Numerical reasoning** - Understands 25 people > 20 people requirement
+- ✅ **Weighs importance** - Critical features vs nice-to-haves
+- ✅ **Explains decisions** - Natural language justifications
+- ✅ **Adapts to any scenario** - No code changes needed for new property types
+- ✅ **Handles complexity** - Multi-factor decision making
+- ✅ **Understands negations** - "needs renovation" vs "no renovation needed"
+
+**Trade-offs:**
+- Requires API calls (cost + latency)
+- Less predictable than pure rules
+- Needs well-crafted prompts for consistency
+
+### Why This Matters for Real Estate
+
+Real estate matching is inherently **complex and contextual**:
+
+**Example 1: Context Matters**
+```
+Requirement: "Modern office space"
+Property A: "Recently renovated with glass walls and standing desks"
+Property B: "Traditional mahogany-paneled executive suite"
+
+Rule-based: Can't distinguish (both are "office")
+Text similarity: Similar word counts
+LLM: Understands "modern" ≠ "traditional" → Scores A higher ✓
+```
+
+**Example 2: Implicit Requirements**
+```
+Requirement: "Tech startup office for 30 people"
+Property: "5th floor walkup, no elevator, 1980s decor"
+
+Rule-based: Might score OK (has capacity)
+Text similarity: Matches "office" and "30"
+LLM: Understands tech startups need modern spaces, elevator access → Low score ✓
+```
+
+**Example 3: Flexible Matching**
+```
+Requirement: "Office for 20 people"
+Property: "Capacity: 25 people"
+
+Rule-based: Exact match only, or complex range logic
+Text similarity: Doesn't understand numbers
+LLM: Understands 25 > 20 is good (not too big, not too small) → High score ✓
+```
+
+### Our Implementation Strategy
+
+We use **structured features + LLM reasoning** for best results:
+
+1. **Extract structured features** (near_subway, capacity, condition, etc.)
+2. **Present features in tiered format** (High/Medium/Lower importance)
+3. **Let LLM reason** about the match using those features
+4. **Get explainable scores** with specific feature references
+
+This combines the **reliability of structured data** with the **intelligence of AI reasoning**.
+
+### Performance & Cost
+
+**Gemini 2.0 Flash pricing:**
+- ~$0.0005 per property scored
+- 100 properties = ~$0.05
+- Fast responses (1-3 seconds per property)
+
+**Very cost-effective** for the intelligence gained compared to building and maintaining complex rule systems.
+
+---
+
 ## High-Level Flow
 
 ```
@@ -299,7 +430,7 @@ Match specific features to specific requirements. Be specific in explanations.
 $result = $this->geminiService->extractStructuredData(
     $systemPrompt,
     $userPrompt,
-    ['temperature' => 0.4, 'max_tokens' => 600]
+    ['temperature' => 0.1, 'max_tokens' => 800]
 );
 ```
 
@@ -842,7 +973,7 @@ The new structured approach provides:
 **Solution:** Add to `.env` file:
 ```bash
 GEMINI_API_KEY=your-api-key-here
-GEMINI_MODEL=gemini-1.5-flash
+GEMINI_MODEL=gemini-2.0-flash
 ```
 
 #### 4. Individual Property Scoring Fails
@@ -870,7 +1001,7 @@ Each property requires one API call to Gemini:
 
 ### Cost Estimates
 
-Using Gemini 1.5 Flash (recommended):
+Using Gemini 2.0 Flash (recommended):
 - **Cost per property:** ~$0.0005
 - **10 properties:** ~$0.005
 - **100 properties:** ~$0.05
